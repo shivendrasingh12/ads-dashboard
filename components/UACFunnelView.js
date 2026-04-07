@@ -269,28 +269,49 @@ function CityDetail({ row, period, chartMetrics, onChartMetricToggle }) {
 
             {/* RIGHT: Network cards + adgroup table */}
             <div style={{ display: 'flex', flexDirection: 'column' }}>
-              <div style={{ padding: '8px 14px 4px', fontSize: 10, fontWeight: 600, color: '#0C447C', textTransform: 'uppercase', letterSpacing: '.05em', borderBottom: '0.5px solid var(--border)' }}>Network breakdown</div>
+              <div style={{ padding: '8px 14px 4px', fontSize: 10, fontWeight: 600, color: '#0C447C', textTransform: 'uppercase', letterSpacing: '.05em', borderBottom: '0.5px solid var(--border)' }}>
+                Network breakdown · current vs prior period
+              </div>
               <div style={{ padding: '10px 14px', display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 8, borderBottom: '0.5px solid var(--border)' }}>
-                {netRows.map(n => (
-                  <div key={n.network} style={{ background: 'var(--bg2)', borderRadius: 6, padding: '9px 11px', border: '0.5px solid var(--border)' }}>
-                    <div style={{ fontSize: 12, fontWeight: 500, marginBottom: 6 }}>{n.network}</div>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 4 }}>
-                      {[
-                        { label: 'Spend', key: 'spendsGst', type: 'currency' },
-                        { label: 'I Rate', key: 'iRate', type: 'pct' },
-                        { label: 'CAC+GST', key: 'cacGst', type: 'currency' },
-                        { label: 'CTR', key: 'ctr', type: 'pct' },
-                        { label: 'Custs', key: 'customers', type: 'int' },
-                        { label: 'R2C', key: 'r2c', type: 'pct' },
-                      ].map(m => (
-                        <div key={m.key}>
-                          <div style={{ fontSize: 9, color: 'var(--text3)' }}>{m.label}</div>
-                          <div style={{ fontSize: 12, fontWeight: 500, fontVariantNumeric: 'tabular-nums' }}>{fmt(n.metrics[m.key], m.type)}</div>
-                        </div>
-                      ))}
+                {netRows.map(n => {
+                  const NET_METRICS = [
+                    { label: 'Spend+GST', key: 'spendsGst', type: 'currency', rev: false },
+                    { label: 'I Rate', key: 'iRate', type: 'pct', rev: false },
+                    { label: 'CAC+GST', key: 'cacGst', type: 'currency', rev: true },
+                    { label: 'CTR', key: 'ctr', type: 'pct', rev: false },
+                    { label: 'Custs', key: 'customers', type: 'int', rev: false },
+                    { label: 'R2C', key: 'r2c', type: 'pct', rev: false },
+                  ]
+                  return (
+                    <div key={n.network} style={{ background: 'var(--bg2)', borderRadius: 6, padding: '9px 11px', border: '0.5px solid var(--border)' }}>
+                      <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 8, color: 'var(--text)' }}>{n.network}</div>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 6 }}>
+                        {NET_METRICS.map(m => {
+                          const curr = n.metrics[m.key]
+                          const prev = n.priorMetrics?.[m.key]
+                          const chg = n.changes?.[m.key]
+                          const good = chg !== null && chg !== undefined ? (m.rev ? chg < 0 : chg > 0) : null
+                          return (
+                            <div key={m.key}>
+                              <div style={{ fontSize: 9, color: 'var(--text3)', marginBottom: 1 }}>{m.label}</div>
+                              <div style={{ fontSize: 12, fontWeight: 600, fontVariantNumeric: 'tabular-nums' }}>{fmt(curr, m.type)}</div>
+                              {prev > 0 && (
+                                <div style={{ fontSize: 10, color: 'var(--text3)', marginTop: 1, display: 'flex', alignItems: 'center', gap: 3 }}>
+                                  <span>{fmt(prev, m.type)}</span>
+                                  {chg !== null && chg !== undefined && (
+                                    <span style={{ fontWeight: 500, color: good ? 'var(--green)' : 'var(--red)' }}>
+                                      {chg > 0 ? '↑' : '↓'}{Math.abs(chg).toFixed(1)}%
+                                    </span>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          )
+                        })}
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  )
+                })}
                 {netRows.length === 0 && <div style={{ fontSize: 12, color: 'var(--text3)', gridColumn: '1/-1' }}>No network data</div>}
               </div>
 
@@ -310,30 +331,49 @@ function CityDetail({ row, period, chartMetrics, onChartMetricToggle }) {
                     {agRows.length === 0 && <tr><td colSpan={8} style={{ padding: '10px 14px', fontSize: 12, color: 'var(--text3)' }}>No adgroup data</td></tr>}
                     {agRows.map(a => {
                       const bad = a.ratings.ctr === 'bad' || a.ratings.iRate === 'bad' || a.ratings.cac === 'bad'
+                      const AG_COLS = [
+                        { key: 'spendsGst', type: 'currency', r: null, rev: false },
+                        { key: 'ctr', type: 'pct', r: 'ctr', rev: false },
+                        { key: 'iRate', type: 'pct', r: 'iRate', rev: false },
+                        { key: 'registrations', type: 'int', r: null, rev: false },
+                        { key: 'customers', type: 'int', r: null, rev: false },
+                        { key: 'cacGst', type: 'currency', r: 'cac', rev: true },
+                        { key: 'r2c', type: 'pct', r: 'r2c', rev: false },
+                      ]
                       return (
                         <tr key={a.adGroupId} style={{ borderBottom: '0.5px solid var(--border)', background: bad ? 'rgba(162,45,45,0.04)' : 'transparent' }}>
                           <td style={{ padding: '6px 9px', fontWeight: 500, maxWidth: 180, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                             {a.adGroupName}
                             {bad && <span style={{ fontSize: 9, marginLeft: 5, color: '#A32D2D', background: 'var(--red-bg)', padding: '1px 4px', borderRadius: 3 }}>⚠</span>}
                           </td>
-                          {[
-                            { key: 'spendsGst', type: 'currency', r: null },
-                            { key: 'ctr', type: 'pct', r: 'ctr' },
-                            { key: 'iRate', type: 'pct', r: 'iRate' },
-                            { key: 'registrations', type: 'int', r: null },
-                            { key: 'customers', type: 'int', r: null },
-                            { key: 'cacGst', type: 'currency', r: 'cac' },
-                            { key: 'r2c', type: 'pct', r: 'r2c' },
-                          ].map(col => (
-                            <td key={col.key} style={{ padding: '6px 9px', textAlign: 'right', fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>
-                              <span style={{ fontSize: 12, fontWeight: 500 }}>{fmt(a.metrics[col.key], col.type)}</span>
-                              {col.r && a.ratings[col.r] !== 'avg' && (
-                                <span style={{ fontSize: 9, marginLeft: 3, padding: '1px 3px', borderRadius: 3, background: a.ratings[col.r] === 'good' ? 'var(--green-bg)' : 'var(--red-bg)', color: a.ratings[col.r] === 'good' ? 'var(--green-text)' : 'var(--red-text)', fontWeight: 600 }}>
-                                  {a.ratings[col.r] === 'good' ? '▲' : '▼'}
-                                </span>
-                              )}
-                            </td>
-                          ))}
+                          {AG_COLS.map(col => {
+                            const curr = a.metrics[col.key]
+                            const prev = a.priorMetrics?.[col.key]
+                            const chg = a.changes?.[col.key]
+                            const good = chg !== null && chg !== undefined ? (col.rev ? chg < 0 : chg > 0) : null
+                            return (
+                              <td key={col.key} style={{ padding: '6px 9px', textAlign: 'right', fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 3 }}>
+                                  <span style={{ fontSize: 12, fontWeight: 600 }}>{fmt(curr, col.type)}</span>
+                                  {col.r && a.ratings[col.r] !== 'avg' && (
+                                    <span style={{ fontSize: 9, padding: '1px 3px', borderRadius: 3, background: a.ratings[col.r] === 'good' ? 'var(--green-bg)' : 'var(--red-bg)', color: a.ratings[col.r] === 'good' ? 'var(--green-text)' : 'var(--red-text)', fontWeight: 600 }}>
+                                      {a.ratings[col.r] === 'good' ? '▲' : '▼'}
+                                    </span>
+                                  )}
+                                </div>
+                                {prev > 0 && (
+                                  <div style={{ fontSize: 10, textAlign: 'right', marginTop: 1, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 3 }}>
+                                    <span style={{ color: 'var(--text3)' }}>{fmt(prev, col.type)}</span>
+                                    {chg !== null && chg !== undefined && (
+                                      <span style={{ fontWeight: 500, color: good ? 'var(--green)' : 'var(--red)' }}>
+                                        {chg > 0 ? '↑' : '↓'}{Math.abs(chg).toFixed(1)}%
+                                      </span>
+                                    )}
+                                  </div>
+                                )}
+                              </td>
+                            )
+                          })}
                         </tr>
                       )
                     })}

@@ -255,18 +255,29 @@ export default async function handler(req, res) {
         changes[k] = pctChange(currTotals[k], priorTotals[k])
       }
 
-      // Network breakdown current
-      const networkBreakdown = Object.entries(curr.byNetwork).map(([net, raw]) => ({
-        network: net,
-        metrics: computeMetrics(raw),
-      })).sort((a, b) => b.metrics.spends - a.metrics.spends)
+      // Network breakdown — current + prior + changes
+      const networkBreakdown = Object.entries(curr.byNetwork).map(([net, raw]) => {
+        const currM = computeMetrics(raw)
+        const priorM = computeMetrics(prior.byNetwork[net] || {})
+        const netChanges = {}
+        for (const k of Object.keys(currM)) netChanges[k] = pctChange(currM[k], priorM[k])
+        return { network: net, metrics: currM, priorMetrics: priorM, changes: netChanges }
+      }).sort((a, b) => b.metrics.spends - a.metrics.spends)
 
-      // Adgroup breakdown current - match name from agNameMap
-      const adgroupBreakdown = Object.entries(curr.byAdgroup).map(([agId, raw]) => ({
-        adGroupId: agId,
-        adGroupName: agNameMap[agId] || agId,
-        metrics: computeMetrics(raw),
-      })).sort((a, b) => b.metrics.spends - a.metrics.spends)
+      // Adgroup breakdown — current + prior + changes
+      const adgroupBreakdown = Object.entries(curr.byAdgroup).map(([agId, raw]) => {
+        const currM = computeMetrics(raw)
+        const priorM = computeMetrics(prior.byAdgroup[agId] || {})
+        const agChanges = {}
+        for (const k of Object.keys(currM)) agChanges[k] = pctChange(currM[k], priorM[k])
+        return {
+          adGroupId: agId,
+          adGroupName: agNameMap[agId] || agId,
+          metrics: currM,
+          priorMetrics: priorM,
+          changes: agChanges,
+        }
+      }).sort((a, b) => b.metrics.spends - a.metrics.spends)
 
       // Adgroup ratings
       const agCtrs = adgroupBreakdown.map(a => a.metrics.ctr)
