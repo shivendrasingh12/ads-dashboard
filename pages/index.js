@@ -91,186 +91,6 @@ function CampaignTypeahead({ value, onChange, campaigns }) {
   )
 }
 
-/* ── ALERTS VIEW ── */
-function AlertsView({ filters }) {
-  const [campaigns, setCampaigns] = useState([])
-  const [changes, setChanges] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [errors, setErrors] = useState([])
-
-  useEffect(() => {
-    setLoading(true)
-    const qs = new URLSearchParams({ dateFrom: filters.dateFrom, dateTo: filters.dateTo, platform: filters.platform }).toString()
-    Promise.all([
-      fetch(`/api/campaigns?${qs}`).then(r => r.json()),
-      fetch(`/api/changes?${qs}`).then(r => r.json()),
-    ]).then(([camp, chg]) => {
-      setCampaigns(camp.campaigns || [])
-      setChanges(chg.changes || [])
-      setErrors([...(camp.errors || []), ...(chg.errors || [])])
-      setLoading(false)
-    }).catch(() => setLoading(false))
-  }, [filters])
-
-  const filtered = campaigns.filter(c => !filters.campaign || c.name.toLowerCase().includes(filters.campaign))
-  const paused7d = filtered.filter(c => c.status === 'paused')
-  const budgetAlert = filtered.filter(c => c.budget > 0 && (c.spend / c.budget) > 0.9 && c.status === 'active')
-
-  const CAT_COLORS = { Bids: '#purple-bg', Budget: '#blue-bg', Status: '#amber-bg', Assets: '#green-bg', Targeting: '#blue-bg', Other: '' }
-  const CAT_STYLE = {
-    Bids:      { bg: 'var(--purple-bg)', color: 'var(--purple-text)' },
-    Budget:    { bg: 'var(--blue-bg)',   color: 'var(--blue-text)'   },
-    Status:    { bg: 'var(--amber-bg)',  color: 'var(--amber-text)'  },
-    Assets:    { bg: 'var(--green-bg)',  color: 'var(--green-text)'  },
-    Targeting: { bg: 'var(--blue-bg)',   color: 'var(--blue-text)'   },
-    Other:     { bg: 'var(--bg3)',       color: 'var(--text3)'       },
-  }
-
-  function categorise(fields) {
-    const f = (Array.isArray(fields) ? fields.join(' ') : String(fields || '')).toLowerCase()
-    if (f.includes('bid') || f.includes('cpc') || f.includes('cpa') || f.includes('target')) return 'Bids'
-    if (f.includes('budget')) return 'Budget'
-    if (f.includes('status')) return 'Status'
-    if (f.includes('headline') || f.includes('description') || f.includes('asset')) return 'Assets'
-    if (f.includes('target') || f.includes('audience') || f.includes('location')) return 'Targeting'
-    return 'Other'
-  }
-
-  const filteredChanges = changes.filter(c => {
-    if (!filters.campaign) return true
-    return (c.campaign || '').toLowerCase().includes(filters.campaign) || (c.adGroup || '').toLowerCase().includes(filters.campaign)
-  })
-
-  const allEditors = [...new Set(changes.map(c => c.who).filter(Boolean))]
-
-  return (
-    <div className="view-content">
-      {/* Alert banners */}
-      {paused7d.length > 0 && (
-        <div className="alert-card alert-red">
-          <div className="alert-icon">⚠</div>
-          <div>
-            <div style={{ fontWeight: 600, fontSize: 13, marginBottom: 4 }}>{paused7d.length} campaign{paused7d.length > 1 ? 's' : ''} paused in the last 7 days</div>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-              {paused7d.map(c => (
-                <span key={c.id} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 12, background: 'rgba(220,38,38,.08)', padding: '2px 8px', borderRadius: 6 }}>
-                  <PlatBadge platform={c.platform} /> {c.name}
-                </span>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
-      {budgetAlert.length > 0 && (
-        <div className="alert-card alert-amber">
-          <div className="alert-icon">!</div>
-          <div style={{ fontSize: 13 }}>
-            <strong>{budgetAlert.length} campaign{budgetAlert.length > 1 ? 's' : ''}</strong> above 90% budget utilisation: {budgetAlert.map(c => c.name).join(', ')}
-          </div>
-        </div>
-      )}
-
-      {/* Change history */}
-      <div className="card">
-        <div className="card-header">
-          <div className="card-title">Change history</div>
-          <div style={{ fontSize: 12, color: 'var(--text3)' }}>Google Ads · {filteredChanges.length} changes</div>
-        </div>
-        <div style={{ overflowX: 'auto' }}>
-          <table className="data-table">
-            <thead>
-              <tr>
-                <th>Date / Time</th><th>Campaign</th><th>Ad group</th>
-                <th>Category</th><th>What changed</th><th>Editor</th>
-              </tr>
-            </thead>
-            <tbody>
-              {loading && [1,2,3].map(i => (
-                <tr key={i}><td colSpan={6} style={{ padding: '10px 16px' }}><Skeleton w="100%" /></td></tr>
-              ))}
-              {!loading && filteredChanges.length === 0 && (
-                <tr><td colSpan={6} className="empty-state">No changes in this date range</td></tr>
-              )}
-              {filteredChanges.map((r, i) => {
-                const d = r.time ? new Date(r.time) : null
-                const timeStr = d ? d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short' }) + ' ' + d.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) : '—'
-                const cat = categorise(r.changedFields)
-                const catS = CAT_STYLE[cat] || CAT_STYLE.Other
-                const fields = Array.isArray(r.changedFields) ? r.changedFields : r.changedFields ? [r.changedFields] : []
-                const editor = (r.who || 'API').split('@')[0]
-                return (
-                  <tr key={i}>
-                    <td style={{ color: 'var(--text3)', fontSize: 12, whiteSpace: 'nowrap' }}>{timeStr}</td>
-                    <td style={{ fontWeight: 500, maxWidth: 160, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.campaign || '—'}</td>
-                    <td style={{ color: 'var(--text3)', fontSize: 12, maxWidth: 130, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.adGroup || '—'}</td>
-                    <td><span style={{ fontSize: 11, padding: '2px 7px', borderRadius: 5, fontWeight: 500, background: catS.bg, color: catS.color }}>{cat}</span></td>
-                    <td>
-                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
-                        {fields.map((f, fi) => <span key={fi} style={{ fontSize: 11, background: 'var(--bg3)', padding: '1px 6px', borderRadius: 4, color: 'var(--text2)' }}>{f.replace(/_/g, ' ')}</span>)}
-                        {r.operation === 'REMOVE' && <span style={{ fontSize: 11, color: 'var(--red-text)' }}>Removed</span>}
-                        {r.operation === 'CREATE' && <span style={{ fontSize: 11, color: 'var(--green-text)' }}>Created</span>}
-                      </div>
-                    </td>
-                    <td>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
-                        <div style={{ width: 24, height: 24, borderRadius: '50%', background: 'var(--blue-bg)', color: 'var(--blue-text)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 600 }}>{editor.slice(0,2).toUpperCase()}</div>
-                        <span style={{ fontSize: 12, color: 'var(--text2)' }}>{editor}</span>
-                      </div>
-                    </td>
-                  </tr>
-                )
-              })}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      {/* Campaign overview */}
-      <div className="card" style={{ marginTop: 16 }}>
-        <div className="card-header">
-          <div className="card-title">Campaign overview</div>
-          <div style={{ fontSize: 12, color: 'var(--text3)' }}>{filtered.length} campaigns</div>
-        </div>
-        <div style={{ overflowX: 'auto' }}>
-          <table className="data-table">
-            <thead>
-              <tr><th>Campaign</th><th>Platform</th><th>Status</th><th>Budget</th><th>Spend</th><th>CTR</th><th>CPC</th><th>Conv</th><th>CPA</th></tr>
-            </thead>
-            <tbody>
-              {loading && [1,2,3,4].map(i => <tr key={i}><td colSpan={9} style={{ padding: '10px 16px' }}><Skeleton w="100%" /></td></tr>)}
-              {!loading && filtered.length === 0 && <tr><td colSpan={9} className="empty-state">No campaigns found</td></tr>}
-              {filtered.map(c => {
-                const pct = c.budget > 0 ? Math.min(100, Math.round(c.spend / c.budget * 100)) : 0
-                const barColor = pct > 90 ? 'var(--red)' : pct > 70 ? 'var(--amber)' : 'var(--green)'
-                return (
-                  <tr key={c.id}>
-                    <td style={{ fontWeight: 500, maxWidth: 220, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.name}</td>
-                    <td><PlatBadge platform={c.platform} /></td>
-                    <td><StatusPill status={c.status} /></td>
-                    <td style={{ fontVariantNumeric: 'tabular-nums' }}>{c.budget > 0 ? '₹' + c.budget.toLocaleString('en-IN') : '—'}</td>
-                    <td>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <div style={{ width: 48, height: 4, borderRadius: 99, background: 'var(--bg3)', overflow: 'hidden', flexShrink: 0 }}>
-                          <div style={{ width: pct + '%', height: '100%', background: barColor, borderRadius: 99 }} />
-                        </div>
-                        <span style={{ fontSize: 12, fontVariantNumeric: 'tabular-nums', color: 'var(--text2)' }}>₹{(c.spend || 0).toLocaleString('en-IN')}</span>
-                      </div>
-                    </td>
-                    <td style={{ fontVariantNumeric: 'tabular-nums' }}>{c.ctr > 0 ? c.ctr + '%' : '—'}</td>
-                    <td style={{ fontVariantNumeric: 'tabular-nums' }}>{c.cpc > 0 ? '₹' + c.cpc : '—'}</td>
-                    <td style={{ fontVariantNumeric: 'tabular-nums' }}>{c.conversions || 0}</td>
-                    <td style={{ fontVariantNumeric: 'tabular-nums' }}>{c.cpa > 0 ? '₹' + c.cpa : '—'}</td>
-                  </tr>
-                )
-              })}
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-  )
-}
-
 /* ── REMINDERS VIEW ── */
 function RemindersView({ filters, allCampaigns }) {
   const [reminders, setReminders] = useState([])
@@ -382,12 +202,27 @@ function RemindersView({ filters, allCampaigns }) {
 
 /* ── ADS ANALYSER VIEW ── */
 const AD_METRICS = [
-  { key: 'impressions', label: 'Impressions' }, { key: 'clicks', label: 'Clicks' },
-  { key: 'ctr', label: 'CTR %' }, { key: 'cpc', label: 'CPC ₹' },
-  { key: 'spend', label: 'Spend ₹' }, { key: 'conversions', label: 'Conv.' },
-  { key: 'cpa', label: 'CPA ₹' }, { key: 'cpm', label: 'CPM ₹' },
-  { key: 'reach', label: 'Reach' }, { key: 'frequency', label: 'Freq.' },
+  { key: 'impressions', label: 'Impressions', rev: false },
+  { key: 'clicks',      label: 'Clicks',      rev: false },
+  { key: 'ctr',         label: 'CTR',         rev: false },
+  { key: 'cpc',         label: 'CPC',         rev: true  },
+  { key: 'spend',       label: 'Spend',       rev: false },
+  { key: 'conversions', label: 'Conv',        rev: false },
+  { key: 'cpa',         label: 'CPA',         rev: true  },
+  { key: 'cpm',         label: 'CPM',         rev: true  },
+  { key: 'reach',       label: 'Reach',       rev: false },
+  { key: 'frequency',   label: 'Freq',        rev: true  },
 ]
+const CHART_KEYS = ['impressions','clicks','ctr','cpc','spend','conversions','cpa']
+
+function fmtM(key, val) {
+  if (!val && val !== 0) return '—'
+  if (val === 0) return '—'
+  if (['spend','cpc','cpa','cpm'].includes(key)) return '₹' + Number(val).toLocaleString('en-IN')
+  if (key === 'ctr') return Number(val).toFixed(2) + '%'
+  if (key === 'frequency') return Number(val).toFixed(2)
+  return Number(val).toLocaleString('en-IN')
+}
 
 function relativeRating(val, allVals, lowerIsBetter = false) {
   const valid = allVals.filter(v => v > 0)
@@ -398,85 +233,254 @@ function relativeRating(val, allVals, lowerIsBetter = false) {
   return ratio > 1.15 ? 'good' : ratio < 0.8 ? 'bad' : 'avg'
 }
 
-function AdsetRow({ adset, ads, allCtrs, allCpcs }) {
+function MiniRat({ r }) {
+  if (!r || r === 'avg') return null
+  return r === 'good'
+    ? <span style={{ fontSize: 9, padding: '1px 3px', borderRadius: 3, background: 'var(--green-bg)', color: 'var(--green-text)', fontWeight: 700, marginLeft: 3 }}>▲</span>
+    : <span style={{ fontSize: 9, padding: '1px 3px', borderRadius: 3, background: 'var(--red-bg)', color: 'var(--red-text)', fontWeight: 700, marginLeft: 3 }}>▼</span>
+}
+
+function MetricBar({ current, prior, selectedKeys, onToggle }) {
+  return (
+    <div style={{ padding: '14px 16px', borderTop: '0.5px solid var(--border)', background: 'var(--bg2)' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 12, flexWrap: 'wrap' }}>
+        <span style={{ fontSize: 10, fontWeight: 600, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '.06em' }}>Chart:</span>
+        {CHART_KEYS.map(k => {
+          const m = AD_METRICS.find(x => x.key === k)
+          const sel = selectedKeys.includes(k)
+          return (
+            <span key={k} onClick={() => onToggle(k)} style={{
+              fontSize: 11, padding: '3px 8px', borderRadius: 99, cursor: 'pointer', userSelect: 'none',
+              border: `0.5px solid ${sel ? 'var(--accent)' : 'var(--border)'}`,
+              background: sel ? 'var(--blue-bg)' : 'transparent',
+              color: sel ? 'var(--blue-text)' : 'var(--text3)',
+            }}>{m?.label}</span>
+          )
+        })}
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(200px,1fr))', gap: 14 }}>
+        {AD_METRICS.filter(m => selectedKeys.includes(m.key)).map(m => {
+          const cv = current?.[m.key] || 0
+          const pv = prior?.[m.key] || 0
+          const maxV = Math.max(cv, pv, 1)
+          const chg = pv > 0 ? ((cv - pv) / pv * 100) : null
+          const good = chg !== null ? (m.rev ? chg < 0 : chg > 0) : null
+          return (
+            <div key={m.key}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 5 }}>
+                <span style={{ fontSize: 11, fontWeight: 500, color: 'var(--text2)' }}>{m.label}</span>
+                {chg !== null && <span style={{ fontSize: 11, fontWeight: 600, color: good ? 'var(--green)' : 'var(--red)' }}>{chg > 0 ? '↑' : '↓'}{Math.abs(chg).toFixed(1)}%</span>}
+              </div>
+              {[{ label: 'Current', val: cv, color: 'var(--accent)' }, { label: 'Prior', val: pv, color: 'var(--border2)' }].map(b => (
+                <div key={b.label} style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 4 }}>
+                  <span style={{ fontSize: 10, color: 'var(--text3)', width: 38, flexShrink: 0 }}>{b.label}</span>
+                  <div style={{ flex: 1, height: 14, background: 'var(--bg3)', borderRadius: 3, overflow: 'hidden' }}>
+                    <div style={{ width: Math.round(b.val / maxV * 100) + '%', height: '100%', background: b.color, borderRadius: 3, transition: 'width .4s' }} />
+                  </div>
+                  <span style={{ fontSize: 11, fontWeight: 500, minWidth: 70, textAlign: 'right', fontVariantNumeric: 'tabular-nums', color: b.label === 'Prior' ? 'var(--text3)' : 'var(--text)' }}>{fmtM(m.key, b.val)}</span>
+                </div>
+              ))}
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
+function AssetPanel({ adGroupId, adGroupName, dateFrom, dateTo }) {
+  const [assets, setAssets] = useState(null)
+  const [loading, setLoading] = useState(false)
+  const [loaded, setLoaded] = useState(false)
+
+  function load() {
+    setLoading(true)
+    fetch(`/api/assets?adGroupId=${adGroupId}&dateFrom=${dateFrom}&dateTo=${dateTo}`)
+      .then(r => r.json())
+      .then(d => { setAssets(d.assets || []); setLoading(false); setLoaded(true) })
+      .catch(() => { setAssets([]); setLoading(false); setLoaded(true) })
+  }
+
+  if (!loaded) return (
+    <tr><td colSpan={AD_METRICS.length + 1} style={{ padding: '6px 16px 12px', background: 'var(--bg2)' }}>
+      <button onClick={load} style={{ fontSize: 11, padding: '4px 12px', borderRadius: 5, border: '0.5px solid var(--border)', background: 'var(--bg)', color: 'var(--text3)', cursor: 'pointer' }}>
+        {loading ? 'Loading assets...' : '↓ View asset performance'}
+      </button>
+    </td></tr>
+  )
+
+  return (
+    <tr><td colSpan={AD_METRICS.length + 1} style={{ padding: 0, background: 'var(--bg2)', borderBottom: '1px solid var(--border)' }}>
+      {assets.length === 0 ? (
+        <div style={{ padding: '10px 20px', fontSize: 12, color: 'var(--text3)' }}>Asset-level data not available for this ad group — UAC campaigns may not expose individual asset metrics via the API.</div>
+      ) : (
+        <div style={{ padding: '12px 16px' }}>
+          <div style={{ fontSize: 10, fontWeight: 600, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 10 }}>Asset performance · {adGroupName}</div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {assets.map(a => (
+              <div key={a.id} style={{ background: 'var(--bg)', border: '0.5px solid var(--border)', borderRadius: 8, padding: '10px 14px', display: 'flex', gap: 14, alignItems: 'flex-start' }}>
+                {a.youtubeVideos?.[0] && (
+                  <a href={`https://youtube.com/watch?v=${a.youtubeVideos[0].videoId}`} target="_blank" rel="noreferrer" style={{ flexShrink: 0 }}>
+                    <img src={a.youtubeVideos[0].thumbnailUrl} alt="" style={{ width: 90, height: 60, objectFit: 'cover', borderRadius: 5, border: '0.5px solid var(--border)', display: 'block' }} />
+                  </a>
+                )}
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 5 }}>
+                    <span style={{ fontWeight: 600, fontSize: 13, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.name}</span>
+                    <StatusPill status={a.status?.toLowerCase() === 'enabled' ? 'active' : 'paused'} />
+                  </div>
+                  {a.headlines.length > 0 && <div style={{ fontSize: 11, color: 'var(--text3)', marginBottom: 6 }}>{a.headlines.slice(0,3).join(' · ')}</div>}
+                  <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap' }}>
+                    {[
+                      { label: 'Impressions', val: a.metrics.impressions, k: 'impressions' },
+                      { label: 'Clicks', val: a.metrics.clicks, k: 'clicks' },
+                      { label: 'CTR', val: a.metrics.ctr, k: 'ctr' },
+                      { label: 'CPC', val: a.metrics.cpc, k: 'cpc' },
+                      { label: 'Spend', val: a.metrics.spend, k: 'spend' },
+                      { label: 'Conv', val: a.metrics.conversions, k: 'conversions' },
+                      ...(a.metrics.videoViews > 0 ? [{ label: 'Views', val: a.metrics.videoViews, k: 'impressions' }, { label: 'VTR', val: a.metrics.videoViewRate, k: 'ctr' }] : [])
+                    ].map(m => (
+                      <div key={m.label}>
+                        <div style={{ fontSize: 10, color: 'var(--text3)' }}>{m.label}</div>
+                        <div style={{ fontSize: 13, fontWeight: 500, fontVariantNumeric: 'tabular-nums' }}>{fmtM(m.k, m.val)}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </td></tr>
+  )
+}
+
+function AdsetRow({ adset, priorAdset, ads, priorAds, allCtrs, allCpcs, filters }) {
   const [expanded, setExpanded] = useState(false)
+  const [chartKeys, setChartKeys] = useState(['impressions', 'clicks', 'ctr'])
   const ctrR = relativeRating(adset.ctr, allCtrs)
   const cpcR = relativeRating(adset.cpc, allCpcs, true)
   const myAds = ads.filter(a => a.adGroupId === adset.id || a.adgroup === adset.name)
-  const adCtrs = myAds.map(a => a.ctr)
-  const adCpcs = myAds.map(a => a.cpc)
 
-  function RatingBadge({ r }) {
-    if (!r || r === 'avg') return null
-    return r === 'good'
-      ? <span style={{ fontSize: 9, padding: '1px 4px', borderRadius: 3, background: 'var(--green-bg)', color: 'var(--green-text)', fontWeight: 600 }}>▲</span>
-      : <span style={{ fontSize: 9, padding: '1px 4px', borderRadius: 3, background: 'var(--red-bg)', color: 'var(--red-text)', fontWeight: 600 }}>▼</span>
+  function toggleChart(k) {
+    setChartKeys(prev => prev.includes(k) ? (prev.length > 1 ? prev.filter(x => x !== k) : prev) : prev.length < 4 ? [...prev, k] : prev)
   }
 
   return (
     <>
-      <tr style={{ cursor: 'pointer', background: expanded ? 'var(--bg2)' : 'transparent' }} onClick={() => setExpanded(!expanded)}>
-        <td style={{ paddingLeft: 16 }}>
+      <tr style={{ cursor: 'pointer', background: expanded ? 'var(--bg2)' : 'transparent', borderBottom: '0.5px solid var(--border)' }} onClick={() => setExpanded(!expanded)}>
+        <td style={{ padding: '10px 16px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span style={{ fontSize: 12, color: 'var(--text3)', transition: 'transform .15s', display: 'inline-block', transform: expanded ? 'rotate(90deg)' : 'none' }}>›</span>
+            <span style={{ fontSize: 12, color: 'var(--text3)', display: 'inline-block', transition: 'transform .15s', transform: expanded ? 'rotate(90deg)' : 'none' }}>›</span>
             <div>
-              <div style={{ fontWeight: 500 }}>{adset.name}</div>
+              <div style={{ fontWeight: 500, fontSize: 13 }}>{adset.name}</div>
               <div style={{ fontSize: 11, color: 'var(--text3)' }}>{myAds.length} ad{myAds.length !== 1 ? 's' : ''}</div>
             </div>
           </div>
         </td>
-        {AD_METRICS.map(m => (
-          <td key={m.key} style={{ fontVariantNumeric: 'tabular-nums' }}>
-            {fmtVal(m.key, adset[m.key])}
-            {m.key === 'ctr' && <RatingBadge r={ctrR} />}
-            {m.key === 'cpc' && <RatingBadge r={cpcR} />}
-          </td>
-        ))}
-      </tr>
-      {expanded && myAds.map(ad => (
-        <tr key={ad.id} style={{ background: 'var(--bg2)', fontSize: 12 }}>
-          <td style={{ paddingLeft: 40 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span style={{ width: 2, height: 24, background: 'var(--border2)', borderRadius: 1, flexShrink: 0 }} />
-              <span style={{ color: 'var(--text2)' }}>{ad.name}</span>
-            </div>
-          </td>
-          {AD_METRICS.map(m => (
-            <td key={m.key} style={{ fontVariantNumeric: 'tabular-nums', color: 'var(--text2)' }}>
-              {fmtVal(m.key, ad[m.key])}
+        {AD_METRICS.map(m => {
+          const cv = adset[m.key] || 0
+          const pv = priorAdset?.[m.key] || 0
+          const chg = pv > 0 ? ((cv - pv) / pv * 100) : null
+          const good = chg !== null ? (m.rev ? chg < 0 : chg > 0) : null
+          return (
+            <td key={m.key} style={{ padding: '10px 8px', fontVariantNumeric: 'tabular-nums' }}>
+              <div style={{ display: 'flex', alignItems: 'center' }}>
+                <span style={{ fontSize: 13, fontWeight: 500 }}>{fmtM(m.key, cv)}</span>
+                {m.key === 'ctr' && <MiniRat r={ctrR} />}
+                {m.key === 'cpc' && <MiniRat r={cpcR} />}
+              </div>
+              {pv > 0 && <div style={{ fontSize: 10, color: 'var(--text3)', display: 'flex', alignItems: 'center', gap: 3, marginTop: 1 }}>
+                {fmtM(m.key, pv)}{chg !== null && <span style={{ color: good ? 'var(--green)' : 'var(--red)', fontWeight: 500 }}>{chg > 0 ? '↑' : '↓'}{Math.abs(chg).toFixed(1)}%</span>}
+              </div>}
             </td>
-          ))}
+          )
+        })}
+      </tr>
+      {expanded && <>
+        <tr style={{ background: 'var(--bg2)' }}>
+          <td colSpan={AD_METRICS.length + 1} style={{ padding: 0 }}>
+            <MetricBar current={adset} prior={priorAdset || {}} selectedKeys={chartKeys} onToggle={toggleChart} />
+          </td>
         </tr>
-      ))}
+        {myAds.map(ad => {
+          const priorAd = priorAds?.find(x => x.id === ad.id) || {}
+          return (
+            <tr key={ad.id} style={{ background: 'var(--bg2)', borderBottom: '0.5px solid var(--border)', fontSize: 12 }}>
+              <td style={{ padding: '8px 8px 8px 44px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <span style={{ width: 2, height: 20, background: 'var(--border2)', borderRadius: 1, flexShrink: 0 }} />
+                  <span style={{ color: 'var(--text2)', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 200 }}>{ad.name}</span>
+                </div>
+              </td>
+              {AD_METRICS.map(m => {
+                const cv = ad[m.key] || 0
+                const pv = priorAd[m.key] || 0
+                const chg = pv > 0 ? ((cv - pv) / pv * 100) : null
+                const good = chg !== null ? (m.rev ? chg < 0 : chg > 0) : null
+                return (
+                  <td key={m.key} style={{ padding: '8px', fontVariantNumeric: 'tabular-nums' }}>
+                    <div>{fmtM(m.key, cv)}</div>
+                    {pv > 0 && chg !== null && <div style={{ fontSize: 10, color: good ? 'var(--green)' : 'var(--red)', fontWeight: 500 }}>{chg > 0 ? '↑' : '↓'}{Math.abs(chg).toFixed(1)}%</div>}
+                  </td>
+                )
+              })}
+            </tr>
+          )
+        })}
+        <AssetPanel adGroupId={adset.id} adGroupName={adset.name} dateFrom={filters.dateFrom} dateTo={filters.dateTo} />
+      </>}
     </>
   )
 }
 
-function CampaignBlock({ campaign, filters, chartMetric }) {
+function CampaignBlock({ campaign, filters }) {
   const [adsets, setAdsets] = useState([])
   const [ads, setAds] = useState([])
+  const [priorAdsets, setPriorAdsets] = useState([])
+  const [priorAds, setPriorAds] = useState([])
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState('adgroups')
   const [collapsed, setCollapsed] = useState(false)
+  const [chartKeys, setChartKeys] = useState(['impressions', 'clicks', 'ctr'])
 
   useEffect(() => {
+    const from = new Date(filters.dateFrom), to = new Date(filters.dateTo)
+    const dur = to - from
+    const priorTo = new Date(from - 1), priorFrom = new Date(priorTo - dur)
+    const priorFromStr = priorFrom.toISOString().split('T')[0]
+    const priorToStr = priorTo.toISOString().split('T')[0]
     const qs = new URLSearchParams({ dateFrom: filters.dateFrom, dateTo: filters.dateTo, platform: campaign.platform, campaignFilter: campaign.name }).toString()
-    Promise.all([fetch(`/api/adgroups?${qs}`).then(r => r.json()), fetch(`/api/ads?${qs}`).then(r => r.json())])
-      .then(([ag, a]) => {
-        setAdsets((ag.adgroups || []).filter(x => x.campaignId === campaign.id || x.campaign === campaign.name))
-        setAds((a.ads || []).filter(x => x.campaignId === campaign.id || x.campaign === campaign.name))
-        setLoading(false)
-      })
+    const qsP = new URLSearchParams({ dateFrom: priorFromStr, dateTo: priorToStr, platform: campaign.platform, campaignFilter: campaign.name }).toString()
+    Promise.all([
+      fetch(`/api/adgroups?${qs}`).then(r => r.json()),
+      fetch(`/api/ads?${qs}`).then(r => r.json()),
+      fetch(`/api/adgroups?${qsP}`).then(r => r.json()),
+      fetch(`/api/ads?${qsP}`).then(r => r.json()),
+    ]).then(([ag, a, agP, aP]) => {
+      const agF = (ag.adgroups || []).filter(x => x.campaignId === campaign.id || x.campaign === campaign.name)
+      const aF  = (a.ads || []).filter(x => x.campaignId === campaign.id || x.campaign === campaign.name)
+      setAdsets(agF); setAds(aF)
+      setPriorAdsets((agP.adgroups || []).filter(x => x.campaignId === campaign.id || x.campaign === campaign.name))
+      setPriorAds((aP.ads || []).filter(x => x.campaignId === campaign.id || x.campaign === campaign.name))
+      setLoading(false)
+    })
   }, [campaign, filters])
 
-  const displayData = activeTab === 'adgroups' ? adsets : ads
-  const allCtrs = displayData.map(d => d.ctr)
-  const allCpcs = displayData.map(d => d.cpc)
+  const allCtrs = adsets.map(d => d.ctr)
+  const allCpcs = adsets.map(d => d.cpc)
+  const campCurr = adsets.reduce((a, x) => { AD_METRICS.forEach(m => { a[m.key] = (a[m.key] || 0) + (x[m.key] || 0) }); return a }, {})
+  const campPrior = priorAdsets.reduce((a, x) => { AD_METRICS.forEach(m => { a[m.key] = (a[m.key] || 0) + (x[m.key] || 0) }); return a }, {})
+
+  function toggleChart(k) {
+    setChartKeys(prev => prev.includes(k) ? (prev.length > 1 ? prev.filter(x => x !== k) : prev) : prev.length < 4 ? [...prev, k] : prev)
+  }
 
   return (
     <div className="card" style={{ marginBottom: 12, overflow: 'hidden' }}>
       <div style={{ padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', borderBottom: collapsed ? 'none' : '0.5px solid var(--border)' }} onClick={() => setCollapsed(!collapsed)}>
-        <span style={{ fontSize: 12, color: 'var(--text3)', transition: 'transform .15s', display: 'inline-block', transform: collapsed ? 'rotate(-90deg)' : 'rotate(0)' }}>▾</span>
+        <span style={{ fontSize: 12, color: 'var(--text3)', display: 'inline-block', transition: 'transform .15s', transform: collapsed ? 'rotate(-90deg)' : 'none' }}>▾</span>
         <PlatBadge platform={campaign.platform} />
         <span style={{ fontWeight: 600, fontSize: 14, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{campaign.name}</span>
         <StatusPill status={campaign.status} />
@@ -486,46 +490,57 @@ function CampaignBlock({ campaign, filters, chartMetric }) {
           <span>{campaign.conversions || 0} conv</span>
         </div>
       </div>
-
-      {!collapsed && (
-        <>
-          <div style={{ display: 'flex', borderBottom: '0.5px solid var(--border)', padding: '0 16px' }}>
-            {['adgroups', 'ads'].map(t => (
-              <div key={t} style={{ padding: '8px 12px', fontSize: 12, cursor: 'pointer', borderBottom: activeTab === t ? '2px solid var(--accent)' : '2px solid transparent', color: activeTab === t ? 'var(--accent)' : 'var(--text3)', fontWeight: activeTab === t ? 600 : 400, marginBottom: -0.5 }} onClick={() => setActiveTab(t)}>
-                {t === 'adgroups' ? (campaign.platform === 'meta' ? 'Adsets' : 'Ad groups') : 'Ads'}
-                {' '}({t === 'adgroups' ? adsets.length : ads.length})
-              </div>
-            ))}
-          </div>
-          {loading && <div style={{ padding: 20, textAlign: 'center', color: 'var(--text3)', fontSize: 13 }}>Loading...</div>}
-          {!loading && displayData.length === 0 && <div className="empty-state">No data for this date range</div>}
-          {!loading && displayData.length > 0 && (
-            <div style={{ overflowX: 'auto' }}>
-              <table className="data-table">
-                <thead>
-                  <tr>
-                    <th style={{ minWidth: 200 }}>{activeTab === 'adgroups' ? campaign.platform === 'meta' ? 'Adset' : 'Ad group' : 'Ad'}</th>
-                    {activeTab === 'ads' && <th>Ad group</th>}
-                    {AD_METRICS.map(m => <th key={m.key}>{m.label}</th>)}
-                  </tr>
-                </thead>
-                <tbody>
-                  {activeTab === 'adgroups'
-                    ? adsets.map(a => <AdsetRow key={a.id} adset={a} ads={ads} allCtrs={allCtrs} allCpcs={allCpcs} />)
-                    : ads.map(ad => (
-                      <tr key={ad.id}>
-                        <td style={{ fontWeight: 500, maxWidth: 160, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ad.name}</td>
-                        <td style={{ color: 'var(--text3)', fontSize: 12, maxWidth: 120, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ad.adgroup}</td>
-                        {AD_METRICS.map(m => <td key={m.key} style={{ fontVariantNumeric: 'tabular-nums' }}>{fmtVal(m.key, ad[m.key])}</td>)}
-                      </tr>
-                    ))
-                  }
-                </tbody>
-              </table>
+      {!collapsed && <>
+        {!loading && adsets.length > 0 && <MetricBar current={campCurr} prior={campPrior} selectedKeys={chartKeys} onToggle={toggleChart} />}
+        <div style={{ display: 'flex', borderBottom: '0.5px solid var(--border)', padding: '0 16px', borderTop: '0.5px solid var(--border)' }}>
+          {['adgroups', 'ads'].map(t => (
+            <div key={t} style={{ padding: '8px 12px', fontSize: 12, cursor: 'pointer', borderBottom: activeTab === t ? '2px solid var(--accent)' : '2px solid transparent', color: activeTab === t ? 'var(--accent)' : 'var(--text3)', fontWeight: activeTab === t ? 600 : 400, marginBottom: -0.5 }} onClick={e => { e.stopPropagation(); setActiveTab(t) }}>
+              {t === 'adgroups' ? 'Ad groups' : 'Ads'} ({t === 'adgroups' ? adsets.length : ads.length})
             </div>
-          )}
-        </>
-      )}
+          ))}
+        </div>
+        {loading && <div style={{ padding: 20, textAlign: 'center', color: 'var(--text3)', fontSize: 13 }}>Loading...</div>}
+        {!loading && (activeTab === 'adgroups' ? adsets : ads).length === 0 && <div className="empty-state">No data for this date range</div>}
+        {!loading && (
+          <div style={{ overflowX: 'auto' }}>
+            <table className="data-table">
+              <thead>
+                <tr>
+                  <th style={{ minWidth: 220 }}>{activeTab === 'adgroups' ? 'Ad group' : 'Ad'}</th>
+                  {AD_METRICS.map(m => <th key={m.key}><div>{m.label}</div><div style={{ fontSize: 9, color: 'var(--text3)', fontWeight: 400 }}>curr / prior</div></th>)}
+                </tr>
+              </thead>
+              <tbody>
+                {activeTab === 'adgroups'
+                  ? adsets.map(a => <AdsetRow key={a.id} adset={a} priorAdset={priorAdsets.find(x => x.id === a.id)} ads={ads} priorAds={priorAds} allCtrs={allCtrs} allCpcs={allCpcs} filters={filters} />)
+                  : ads.map(ad => {
+                      const pAd = priorAds.find(x => x.id === ad.id) || {}
+                      return (
+                        <tr key={ad.id} style={{ borderBottom: '0.5px solid var(--border)' }}>
+                          <td style={{ padding: '10px 16px', fontWeight: 500, maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            <div>{ad.name}</div>
+                            <div style={{ fontSize: 11, color: 'var(--text3)' }}>{ad.adgroup}</div>
+                          </td>
+                          {AD_METRICS.map(m => {
+                            const cv = ad[m.key] || 0, pv = pAd[m.key] || 0
+                            const chg = pv > 0 ? ((cv - pv) / pv * 100) : null
+                            const good = chg !== null ? (m.rev ? chg < 0 : chg > 0) : null
+                            return (
+                              <td key={m.key} style={{ padding: '10px 8px', fontVariantNumeric: 'tabular-nums' }}>
+                                <div style={{ fontWeight: 500 }}>{fmtM(m.key, cv)}</div>
+                                {pv > 0 && chg !== null && <div style={{ fontSize: 10, color: good ? 'var(--green)' : 'var(--red)', fontWeight: 500 }}>{chg > 0 ? '↑' : '↓'}{Math.abs(chg).toFixed(1)}%</div>}
+                              </td>
+                            )
+                          })}
+                        </tr>
+                      )
+                    })
+                }
+              </tbody>
+            </table>
+          </div>
+        )}
+      </>}
     </div>
   )
 }
@@ -557,49 +572,52 @@ function AnalyserView({ filters, allCampaigns }) {
 
   return (
     <div className="view-content">
-      {/* Campaign selector */}
       <div className="card" style={{ marginBottom: 16 }}>
         <div className="card-header"><div className="card-title">Select campaigns to analyse</div></div>
-        <div style={{ padding: '0 16px 16px' }}>
+        <div style={{ padding: '12px 16px' }}>
           {selectedCampaigns.length > 0 && (
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 10 }}>
               {selectedCampaigns.map(c => (
-                <div key={c.id} style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'var(--blue-bg)', border: '0.5px solid var(--accent)', borderRadius: 99, padding: '4px 10px', fontSize: 12 }}>
+                <div key={c.id} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: 'var(--blue-bg)', border: '1px solid var(--accent)', borderRadius: 99, padding: '4px 10px', fontSize: 12 }}>
                   <PlatBadge platform={c.platform} />
-                  <span style={{ color: 'var(--blue-text)', maxWidth: 180, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.name}</span>
-                  <span style={{ cursor: 'pointer', color: 'var(--blue-text)', fontSize: 14, fontWeight: 500 }} onClick={() => toggle(c)}>×</span>
+                  <span style={{ color: 'var(--blue-text)', maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.name}</span>
+                  <span style={{ cursor: 'pointer', color: 'var(--blue-text)', fontSize: 16, lineHeight: 1 }} onClick={() => toggle(c)}>×</span>
                 </div>
               ))}
               <button className="btn-ghost btn-sm" onClick={() => setSelectedCampaigns([])}>Clear all</button>
             </div>
           )}
-          <div ref={dropRef} style={{ position: 'relative', maxWidth: 560 }}>
-            <div style={{ display: 'flex', alignItems: 'center', border: '1px solid var(--border2)', borderRadius: 'var(--r-md)', background: 'var(--bg)', overflow: 'hidden' }}>
+          <div ref={dropRef} style={{ position: 'relative' }}>
+            <div style={{ display: 'flex', alignItems: 'center', border: '1px solid var(--border2)', borderRadius: 'var(--r-md)', background: 'var(--bg)', overflow: 'hidden', height: 40 }}>
+              <span style={{ padding: '0 10px', color: 'var(--text3)', fontSize: 15, flexShrink: 0 }}>🔍</span>
               <input
-                style={{ flex: 1, padding: '9px 12px', border: 'none', background: 'transparent', color: 'var(--text)', fontSize: 13, outline: 'none' }}
-                placeholder="Search campaigns..."
+                style={{ flex: 1, padding: '0 8px', border: 'none', background: 'transparent', color: 'var(--text)', fontSize: 13, outline: 'none', height: '100%' }}
+                placeholder={`Search ${dropCampaigns.length} campaigns...`}
                 value={search}
                 onChange={e => setSearch(e.target.value)}
                 onFocus={() => setDropOpen(true)}
               />
-              <label style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '0 12px', fontSize: 12, color: 'var(--text3)', cursor: 'pointer', borderLeft: '0.5px solid var(--border)', whiteSpace: 'nowrap', userSelect: 'none' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '0 12px', fontSize: 12, color: 'var(--text3)', cursor: 'pointer', borderLeft: '0.5px solid var(--border)', height: '100%', userSelect: 'none', whiteSpace: 'nowrap' }}>
                 <input type="checkbox" checked={activeOnly} onChange={e => setActiveOnly(e.target.checked)} style={{ margin: 0 }} />
                 Active only
               </label>
             </div>
             {dropOpen && (
-              <div className="dropdown-menu" style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 100, marginTop: 4, maxHeight: 280, overflowY: 'auto' }}>
-                {dropCampaigns.length === 0 && <div style={{ padding: 12, fontSize: 12, color: 'var(--text3)' }}>No campaigns found</div>}
+              <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 200, marginTop: 4, background: 'var(--bg)', border: '1px solid var(--border2)', borderRadius: 'var(--r-lg)', boxShadow: 'var(--shadow-md)', maxHeight: 320, overflowY: 'auto' }}>
+                {dropCampaigns.length === 0 && <div style={{ padding: 16, fontSize: 13, color: 'var(--text3)', textAlign: 'center' }}>No campaigns found</div>}
                 {dropCampaigns.map(c => {
                   const sel = !!selectedCampaigns.find(x => x.id === c.id)
                   return (
-                    <div key={c.id} className="dropdown-item" style={{ background: sel ? 'var(--blue-bg)' : undefined }} onClick={() => toggle(c)}>
-                      <div style={{ width: 14, height: 14, border: `1.5px solid ${sel ? 'var(--accent)' : 'var(--border2)'}`, borderRadius: 3, background: sel ? 'var(--accent)' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                        {sel && <span style={{ color: '#fff', fontSize: 9 }}>✓</span>}
+                    <div key={c.id} onClick={() => toggle(c)}
+                      style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', cursor: 'pointer', borderBottom: '0.5px solid var(--border)', background: sel ? 'var(--blue-bg)' : 'transparent', transition: 'background .1s' }}
+                      onMouseOver={e => { if (!sel) e.currentTarget.style.background = 'var(--bg2)' }}
+                      onMouseOut={e => { if (!sel) e.currentTarget.style.background = sel ? 'var(--blue-bg)' : 'transparent' }}>
+                      <div style={{ width: 16, height: 16, border: `2px solid ${sel ? 'var(--accent)' : 'var(--border2)'}`, borderRadius: 4, background: sel ? 'var(--accent)' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                        {sel && <span style={{ color: '#fff', fontSize: 10, lineHeight: 1 }}>✓</span>}
                       </div>
                       <PlatBadge platform={c.platform} />
-                      <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: 13 }}>{c.name}</span>
-                      <span style={{ fontSize: 12, color: 'var(--text3)' }}>₹{(c.spend || 0).toLocaleString('en-IN')}</span>
+                      <span style={{ flex: 1, fontSize: 13, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: sel ? 500 : 400 }}>{c.name}</span>
+                      <span style={{ fontSize: 12, color: 'var(--text3)', flexShrink: 0 }}>₹{(c.spend || 0).toLocaleString('en-IN')}</span>
                       <StatusPill status={c.status} />
                     </div>
                   )
@@ -609,12 +627,11 @@ function AnalyserView({ filters, allCampaigns }) {
           </div>
         </div>
       </div>
-
       {selectedCampaigns.length === 0 && (
         <div style={{ textAlign: 'center', padding: '48px 20px', border: '1.5px dashed var(--border2)', borderRadius: 'var(--r-lg)', color: 'var(--text3)' }}>
           <div style={{ fontSize: 28, marginBottom: 10 }}>📊</div>
           <div style={{ fontSize: 15, fontWeight: 500, color: 'var(--text2)', marginBottom: 6 }}>Select campaigns above to analyse</div>
-          <div style={{ fontSize: 13 }}>Multi-select to compare across campaigns. Click adset rows to see individual ads.</div>
+          <div style={{ fontSize: 13 }}>Each campaign shows a pre/post chart, adgroup comparison with prior period, and Google Ads asset performance.</div>
         </div>
       )}
       {selectedCampaigns.map(c => <CampaignBlock key={c.id} campaign={c} filters={filters} />)}
@@ -663,7 +680,6 @@ function ConnectView() {
 
 /* ── MAIN DASHBOARD ── */
 const NAV_ITEMS = [
-  { id: 'alerts',    label: 'Change Alerts',           icon: '🔔', group: 'Views'    },
   { id: 'reminders', label: 'Schedule Reminders',       icon: '📅', group: 'Views'    },
   { id: 'analyser',  label: 'Ads Analyser',             icon: '📊', group: 'Views'    },
   { id: 'uac',       label: 'UAC — ROI Cities',         icon: '🚀', group: 'Funnels'  },
@@ -671,12 +687,12 @@ const NAV_ITEMS = [
   { id: 'connect',   label: 'API Connections',          icon: '🔗', group: 'Setup'    },
 ]
 const VIEW_TITLES = {
-  alerts: 'Change Alerts', reminders: 'Schedule Reminders', analyser: 'Ads Analyser',
+  reminders: 'Schedule Reminders', analyser: 'Ads Analyser',
   uac: 'UAC Funnel — ROI Cities', uact1: 'UAC Funnel — Type 1', connect: 'API Connections',
 }
 
 export default function Dashboard() {
-  const [view, setView] = useState('alerts')
+  const [view, setView] = useState('reminders')
   const [theme, setTheme] = useState('light')
   const [filters, setFilters] = useState({ campaign: '', dateFrom: DEFAULT_FROM, dateTo: DEFAULT_TO, platform: 'all' })
   const [allCampaigns, setAllCampaigns] = useState([])
@@ -769,7 +785,6 @@ export default function Dashboard() {
 
           {/* Page content */}
           <div className="page-content">
-            {view === 'alerts'    && <AlertsView filters={filters} />}
             {view === 'reminders' && <RemindersView filters={filters} allCampaigns={allCampaigns} />}
             {view === 'analyser'  && <AnalyserView filters={filters} allCampaigns={allCampaigns} />}
             {view === 'uac'       && <UACFunnelView filters={filters} title="UAC — ROI Cities" />}
