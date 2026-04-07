@@ -1,0 +1,3 @@
+Place a favicon.ico file here.
+You can use any free favicon generator like https://favicon.io
+Or just delete this file — Next.js will use a default.

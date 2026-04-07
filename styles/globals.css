@@ -1,0 +1,92 @@
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+/* ── Design tokens ── */
+:root {
+  /* Brand */
+  --accent: #2563EB;
+  --accent-light: #EFF6FF;
+  --accent-dark: #1D4ED8;
+  --accent-text: #1E40AF;
+
+  /* Light mode */
+  --bg:        #FFFFFF;
+  --bg2:       #F8FAFC;
+  --bg3:       #F1F5F9;
+  --bg-hover:  #F1F5F9;
+  --text:      #0F172A;
+  --text2:     #475569;
+  --text3:     #94A3B8;
+  --border:    #E2E8F0;
+  --border2:   #CBD5E1;
+  --shadow:    0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.04);
+  --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.07), 0 2px 4px -1px rgba(0,0,0,0.04);
+
+  /* Semantic */
+  --green:      #16A34A;
+  --green-bg:   #F0FDF4;
+  --green-text: #15803D;
+  --red:        #DC2626;
+  --red-bg:     #FEF2F2;
+  --red-text:   #B91C1C;
+  --amber:      #D97706;
+  --amber-bg:   #FFFBEB;
+  --amber-text: #B45309;
+  --blue:       #2563EB;
+  --blue-bg:    #EFF6FF;
+  --blue-text:  #1D4ED8;
+  --purple:     #7C3AED;
+  --purple-bg:  #F5F3FF;
+  --purple-text:#6D28D9;
+
+  /* Radius */
+  --r-sm: 6px;
+  --r-md: 8px;
+  --r-lg: 12px;
+  --r-xl: 16px;
+}
+
+[data-theme="dark"] {
+  --bg:        #0F172A;
+  --bg2:       #1E293B;
+  --bg3:       #334155;
+  --bg-hover:  #1E293B;
+  --text:      #F8FAFC;
+  --text2:     #94A3B8;
+  --text3:     #64748B;
+  --border:    #1E293B;
+  --border2:   #334155;
+  --shadow:    0 1px 3px rgba(0,0,0,0.3), 0 1px 2px rgba(0,0,0,0.2);
+  --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.3);
+
+  --green-bg:   #052E16;
+  --green-text: #4ADE80;
+  --red-bg:     #1C0202;
+  --red-text:   #FCA5A5;
+  --amber-bg:   #1C1200;
+  --amber-text: #FCD34D;
+  --blue-bg:    #0C1A3A;
+  --blue-text:  #93C5FD;
+  --purple-bg:  #1C0A3A;
+  --purple-text:#C4B5FD;
+
+  --accent-light: #1E3A8A;
+  --accent-text:  #93C5FD;
+}
+
+html, body { height: 100%; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', system-ui, sans-serif;
+  background: var(--bg2);
+  color: var(--text);
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  transition: background .2s, color .2s;
+}
+#__next { height: 100%; }
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 99px; }
+::-webkit-scrollbar-thumb:hover { background: var(--text3); }
