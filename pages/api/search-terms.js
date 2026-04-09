@@ -5,7 +5,8 @@
  *                Spend, Clicks, Impressions, Conversions, CPA, CTR
  */
 
-const FLAG_SPEND = 200 // ₹200 min spend to flag
+const FLAG_SPEND = 200
+const HARDCODED_SHEET_ID = '1XOFTVfx1Jh--W4qenofqWENq9x1EyGAo5_Tkt8jz_8k'
 
 async function getAccessToken() {
   const res = await fetch('https://oauth2.googleapis.com/token', {
@@ -36,10 +37,8 @@ export default async function handler(req, res) {
 
   const { campaign: campaignFilter, theme: themeFilter, flaggedOnly } = req.query
 
-  // Support a dedicated search terms sheet ID, or fall back to the main sheet
-  const sheetId = process.env.SEARCH_TERMS_SHEET_ID || process.env.GOOGLE_SHEET_ID
-
-  if (!sheetId) return res.status(500).json({ error: 'No sheet ID configured. Set SEARCH_TERMS_SHEET_ID in env vars.' })
+  // Use env var, fall back to hardcoded sheet ID
+  const sheetId = process.env.SEARCH_TERMS_SHEET_ID || HARDCODED_SHEET_ID
 
   try {
     const accessToken = await getAccessToken()

@@ -202,7 +202,7 @@ export default function SearchTermView({ filters }) {
       .catch(e => { setError(e.message); setLoading(false) })
   }
 
-  useEffect(() => { load(selectedTheme, flaggedOnly, campSearch) }, [filters.dateFrom, filters.dateTo])
+  useEffect(() => { load('All', false, '') }, [])
 
   function handleThemeSelect(theme) {
     setSelectedTheme(theme)
@@ -265,7 +265,16 @@ export default function SearchTermView({ filters }) {
         )}
       </div>
 
-      {error && (
+      {!loading && data && data.summary?.totalTerms === 0 && (
+        <div style={{ textAlign: 'center', padding: '48px 20px', border: '1.5px dashed var(--border2)', borderRadius: 12, color: 'var(--text3)' }}>
+          <div style={{ fontSize: 28, marginBottom: 10 }}>🔍</div>
+          <div style={{ fontSize: 15, fontWeight: 500, color: 'var(--text2)', marginBottom: 8 }}>No search term data found</div>
+          <div style={{ fontSize: 13, maxWidth: 420, margin: '0 auto', lineHeight: 1.7 }}>
+            The Google Ads script hasn't run yet, or the <strong>"Raw Data"</strong> tab in your sheet is empty.<br /><br />
+            Run <code style={{ background: 'var(--bg3)', padding: '2px 6px', borderRadius: 4 }}>1_google_ads_data_pull.js</code> inside Google Ads → Tools → Scripts, then come back and click <strong>Refresh</strong>.
+          </div>
+        </div>
+      )}
         <div style={{ background: 'var(--red-bg)', border: '1px solid rgba(220,38,38,.2)', borderRadius: 8, padding: '10px 14px', fontSize: 12, color: 'var(--red-text)' }}>
           {error}
         </div>
