@@ -275,9 +275,11 @@ export default function SearchTermView({ filters }) {
           </div>
         </div>
       )}
+      {error && (
         <div style={{ background: 'var(--red-bg)', border: '1px solid rgba(220,38,38,.2)', borderRadius: 8, padding: '10px 14px', fontSize: 12, color: 'var(--red-text)' }}>
           {error}
         </div>
+      )}
       )}
 
       {/* Main layout: theme bar + terms table */}
