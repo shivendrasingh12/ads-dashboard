@@ -3,6 +3,8 @@ import Head from 'next/head'
 import UACFunnelView from '../components/UACFunnelView'
 import Chatbot from '../components/Chatbot'
 import SearchTermView from '../components/SearchTermView'
+import MOMView from '../components/MOMView'
+import BidTrackerView from '../components/BidTrackerView'
 
 const addDays = (d, n) => { const x = new Date(d); x.setDate(x.getDate() + n); return x }
 const isoDate = d => d.toISOString().split('T')[0]
@@ -688,7 +690,7 @@ const NAV_ITEMS = [
   { id: 'connect',   label: 'API Connections',       icon: '🔗', group: 'Setup'    },
 ]
 const VIEW_TITLES = {
-  reminders: 'Schedule Reminders', analyser: 'Ads Analyser', searchterms: 'Search Term Optimiser',
+  reminders: 'Schedule Reminders', analyser: 'Ads Analyser', searchterms: 'Search Term Optimiser', mom: 'Minutes of Meeting', bidtracker: 'Bids & Budgets Tracker',
   uac: 'UAC Funnel — ROI Cities', uact1: 'UAC Funnel — Type 1', connect: 'API Connections',
 }
 
@@ -789,6 +791,8 @@ export default function Dashboard() {
             {view === 'reminders'   && <RemindersView filters={filters} allCampaigns={allCampaigns} />}
             {view === 'analyser'    && <AnalyserView filters={filters} allCampaigns={allCampaigns} />}
             {view === 'searchterms' && <SearchTermView filters={filters} />}
+            {view === 'mom' && <MOMView />}
+            {view === 'bidtracker' && <BidTrackerView filters={filters} />}
             {view === 'uac'         && <UACFunnelView filters={filters} title="UAC — ROI Cities" />}
             {view === 'uact1'       && <UACFunnelView filters={filters} sheetId="1NVwo4EAhkhgBI_dJh7wDAs-GFn_DbOGWuzksEPmv9kY" title="UAC — Type 1" />}
             {view === 'connect'     && <ConnectView />}
