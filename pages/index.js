@@ -3,6 +3,7 @@ import Head from 'next/head'
 import UACFunnelView from '../components/UACFunnelView'
 import Chatbot from '../components/Chatbot'
 import SearchTermView from '../components/SearchTermView'
+import SearchTermView from '../components/SearchTermView'
 
 const addDays = (d, n) => { const x = new Date(d); x.setDate(x.getDate() + n); return x }
 const isoDate = d => d.toISOString().split('T')[0]
@@ -691,6 +692,7 @@ const NAV_ITEMS = [
 const VIEW_TITLES = {
   reminders: 'Schedule Reminders', analyser: 'Ads Analyser',
   searchterms: 'Search Term Optimiser',
+  searchterms: 'Search Term Optimiser',
   uac: 'UAC Funnel — ROI Cities', uact1: 'UAC Funnel — Type 1', connect: 'API Connections',
 }
 
@@ -790,6 +792,7 @@ export default function Dashboard() {
           <div className="page-content">
             {view === 'reminders'   && <RemindersView filters={filters} allCampaigns={allCampaigns} />}
             {view === 'analyser'    && <AnalyserView filters={filters} allCampaigns={allCampaigns} />}
+            {view === 'searchterms' && <SearchTermView filters={filters} />}
             {view === 'searchterms' && <SearchTermView filters={filters} />}
             {view === 'uac'         && <UACFunnelView filters={filters} title="UAC — ROI Cities" />}
             {view === 'uact1'       && <UACFunnelView filters={filters} sheetId="1NVwo4EAhkhgBI_dJh7wDAs-GFn_DbOGWuzksEPmv9kY" title="UAC — Type 1" />}
