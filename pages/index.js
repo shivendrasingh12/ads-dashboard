@@ -2,7 +2,6 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import Head from 'next/head'
 import UACFunnelView from '../components/UACFunnelView'
 import Chatbot from '../components/Chatbot'
-import SearchTermView from '../components/SearchTermView'
 import MOMView from '../components/MOMView'
 import BidTrackerView from '../components/BidTrackerView'
 
@@ -690,7 +689,6 @@ const NAV_ITEMS = [
   { id: 'connect',   label: 'API Connections',       icon: '🔗', group: 'Setup'    },
 ]
 const VIEW_TITLES = {
-  reminders: 'Schedule Reminders', analyser: 'Ads Analyser', searchterms: 'Search Term Optimiser', mom: 'Minutes of Meeting', bidtracker: 'Bids & Budgets Tracker',
   uac: 'UAC Funnel — ROI Cities', uact1: 'UAC Funnel — Type 1', connect: 'API Connections',
 }
 
@@ -790,7 +788,6 @@ export default function Dashboard() {
           <div className="page-content">
             {view === 'reminders'   && <RemindersView filters={filters} allCampaigns={allCampaigns} />}
             {view === 'analyser'    && <AnalyserView filters={filters} allCampaigns={allCampaigns} />}
-            {view === 'searchterms' && <SearchTermView filters={filters} />}
             {view === 'mom' && <MOMView />}
             {view === 'bidtracker' && <BidTrackerView filters={filters} />}
             {view === 'uac'         && <UACFunnelView filters={filters} title="UAC — ROI Cities" />}
