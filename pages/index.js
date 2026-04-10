@@ -889,3 +889,4 @@ export default function Dashboard() {
     </>
   )
 }
+python3 ~/Downloads/patch_index.py
