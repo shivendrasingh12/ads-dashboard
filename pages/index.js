@@ -726,7 +726,7 @@ export default function Dashboard() {
             <div className="brand-mark">A</div>
             <div>
               <div className="brand-name">Ads Command</div>
-              <div className="brand-sub">Google + Meta</div>
+              <div className="brand-sub">Google + Meta Analytics</div>
             </div>
           </div>
 
