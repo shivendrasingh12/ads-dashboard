@@ -684,12 +684,14 @@ function ConnectView() {
 const NAV_ITEMS = [
   { id: 'reminders', label: 'Schedule Reminders',  icon: '📅', group: 'Views'    },
   { id: 'analyser',  label: 'Ads Analyser',         icon: '📊', group: 'Views'    },
+  { id: 'mom',        label: 'Minutes of Meeting',    icon: '📋', group: 'Views'    },
+  { id: 'bidtracker', label: 'Bids \& Budgets',         icon: '💰', group: 'Views'    },
   { id: 'uac',       label: 'UAC — ROI Cities',     icon: '🚀', group: 'Funnels'  },
   { id: 'uact1',     label: 'UAC — Type 1',          icon: '🏙️', group: 'Funnels'  },
   { id: 'connect',   label: 'API Connections',       icon: '🔗', group: 'Setup'    },
 ]
 const VIEW_TITLES = {
-  uac: 'UAC Funnel — ROI Cities', uact1: 'UAC Funnel — Type 1', connect: 'API Connections',
+  mom: 'Minutes of Meeting', bidtracker: 'Bids \& Budgets Tracker', uac: 'UAC Funnel — ROI Cities', uact1: 'UAC Funnel — Type 1', connect: 'API Connections',
 }
 
 export default function Dashboard() {
