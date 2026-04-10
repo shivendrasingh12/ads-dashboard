@@ -280,7 +280,6 @@ export default function SearchTermView({ filters }) {
           {error}
         </div>
       )}
-      )}
 
       {/* Main layout: theme bar + terms table */}
       <div style={{ display: 'grid', gridTemplateColumns: '280px 1fr', gap: 16, alignItems: 'start' }}>
