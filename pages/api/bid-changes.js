@@ -1,8 +1,193 @@
 /**
- * Bid & Budget Changes API
- * Queries Google Ads change_event resource for bid/budget changes
- * Falls back to campaign-level current data if change_event is blocked
+ * Bids & Budgets API
+ * Since change_event is blocked for this account type,
+ * this queries campaigns and adgroups to show:
+ * - Current daily budget, bidding strategy, target CPA/ROAS
+ * - Budget utilisation (spend vs budget)
+ * - Spend change vs prior period (to flag significant changes)
  */
+
+async function getAccessToken() {
+  const res = await fetch('https://oauth2.googleapis.com/token', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({
+      client_id: process.env.GOOGLE_CLIENT_ID,
+      client_secret: process.env.GOOGLE_CLIENT_SECRET,
+      refresh_token: process.env.GOOGLE_REFRESH_TOKEN,
+      grant_type: 'refresh_token',
+    }),
+  })
+  const d = await res.json()
+  if (d.error) throw new Error('Token error: ' + d.error_description)
+  return d.access_token
+}
+
+async function gadsQuery(token, customerId, query) {
+  const loginId = process.env.GOOGLE_LOGIN_CUSTOMER_ID || customerId
+  const res = await fetch(`https://googleads.googleapis.com/v23/customers/${customerId}/googleAds:search`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'developer-token': process.env.GOOGLE_DEVELOPER_TOKEN,
+      'login-customer-id': loginId,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ query }),
+  })
+  const d = await res.json()
+  if (d.error) throw new Error(d.error.message)
+  return d.results || []
+}
+
+export default async function handler(req, res) {
+  if (req.method !== 'GET') return res.status(405).end()
+
+  const { campaignFilter, days = '30' } = req.query
+  const customerId = process.env.GOOGLE_CUSTOMER_ID
+  const daysBack = parseInt(days) || 30
+
+  const endDate = new Date()
+  const startDate = new Date()
+  startDate.setDate(startDate.getDate() - daysBack)
+  const priorEndDate = new Date(startDate)
+  priorEndDate.setDate(priorEndDate.getDate() - 1)
+  const priorStartDate = new Date(priorEndDate)
+  priorStartDate.setDate(priorStartDate.getDate() - daysBack)
+
+  const fmt = d => d.toISOString().split('T')[0]
+  const campWhere = campaignFilter
+    ? `AND campaign.name LIKE '%${campaignFilter.replace(/'/g, "\\'")}%'`
+    : ''
+
+  try {
+    const token = await getAccessToken()
+
+    // Current period — campaigns with spend, budget, and bidding
+    const currentQuery = `
+      SELECT
+        campaign.id,
+        campaign.name,
+        campaign.status,
+        campaign.bidding_strategy_type,
+        campaign.target_cpa.target_cpa_micros,
+        campaign.target_roas.target_roas,
+        campaign.maximize_conversions.target_cpa_micros,
+        campaign.maximize_conversion_value.target_roas,
+        campaign_budget.amount_micros,
+        campaign_budget.period,
+        metrics.cost_micros,
+        metrics.conversions,
+        metrics.clicks,
+        metrics.impressions
+      FROM campaign
+      WHERE campaign.status != 'REMOVED'
+        AND segments.date BETWEEN '${fmt(startDate)}' AND '${fmt(endDate)}'
+        ${campWhere}
+      ORDER BY metrics.cost_micros DESC
+      LIMIT 200
+    `
+
+    // Prior period — spend only for comparison
+    const priorQuery = `
+      SELECT
+        campaign.id,
+        campaign.name,
+        metrics.cost_micros,
+        metrics.conversions
+      FROM campaign
+      WHERE campaign.status != 'REMOVED'
+        AND segments.date BETWEEN '${fmt(priorStartDate)}' AND '${fmt(priorEndDate)}'
+        ${campWhere}
+      ORDER BY metrics.cost_micros DESC
+      LIMIT 200
+    `
+
+    const [currentRows, priorRows] = await Promise.all([
+      gadsQuery(token, customerId, currentQuery),
+      gadsQuery(token, customerId, priorQuery),
+    ])
+
+    // Build prior period map
+    const priorMap = {}
+    for (const row of priorRows) {
+      const id = String(row.campaign?.id || '')
+      priorMap[id] = {
+        spend: Number(row.metrics?.costMicros || 0) / 1e6,
+        conversions: Number(row.metrics?.conversions || 0),
+      }
+    }
+
+    const campaigns = currentRows.map(row => {
+      const c = row.campaign || {}
+      const b = row.campaignBudget || row.campaign_budget || {}
+      const m = row.metrics || {}
+
+      const budget = Number(b.amountMicros || b.amount_micros || 0) / 1e6
+      const spend = Number(m.costMicros || m.cost_micros || 0) / 1e6
+      const conversions = Number(m.conversions || 0)
+      const clicks = Number(m.clicks || 0)
+      const impressions = Number(m.impressions || 0)
+
+      const tcpa = Number(
+        c.targetCpa?.targetCpaMicros ||
+        c.target_cpa?.target_cpa_micros ||
+        c.maximizeConversions?.targetCpaMicros ||
+        c.maximize_conversions?.target_cpa_micros || 0
+      ) / 1e6
+
+      const troas = Number(
+        c.targetRoas?.targetRoas ||
+        c.target_roas?.target_roas ||
+        c.maximizeConversionValue?.targetRoas ||
+        c.maximize_conversion_value?.target_roas || 0
+      )
+
+      const id = String(c.id || '')
+      const prior = priorMap[id] || { spend: 0, conversions: 0 }
+      const spendChange = prior.spend > 0 ? ((spend - prior.spend) / prior.spend * 100) : null
+      const budgetUtil = budget > 0 ? (spend / budget * 100) : null
+
+      const strategy = (c.biddingStrategyType || c.bidding_strategy_type || '')
+        .replace(/_/g, ' ').toLowerCase()
+        .replace(/\b\w/g, l => l.toUpperCase())
+
+      return {
+        id,
+        name: c.name || '',
+        status: c.status || '',
+        strategy,
+        budget: budget > 0 ? Math.round(budget) : null,
+        budgetPeriod: b.period || 'DAILY',
+        targetCpa: tcpa > 0 ? Math.round(tcpa) : null,
+        targetRoas: troas > 0 ? parseFloat(troas.toFixed(2)) : null,
+        spend: Math.round(spend),
+        conversions: Math.round(conversions),
+        clicks: Math.round(clicks),
+        cpa: conversions > 0 ? Math.round(spend / conversions) : null,
+        ctr: impressions > 0 ? parseFloat((clicks / impressions * 100).toFixed(2)) : null,
+        budgetUtil: budgetUtil !== null ? parseFloat(budgetUtil.toFixed(1)) : null,
+        priorSpend: Math.round(prior.spend),
+        spendChange: spendChange !== null ? parseFloat(spendChange.toFixed(1)) : null,
+      }
+    })
+
+    return res.status(200).json({
+      campaigns,
+      period: {
+        current: `${fmt(startDate)} → ${fmt(endDate)}`,
+        prior: `${fmt(priorStartDate)} → ${fmt(priorEndDate)}`,
+        days: daysBack,
+      },
+      total: campaigns.length,
+    })
+
+  } catch (e) {
+    console.error('Bid changes error:', e.message)
+    return res.status(500).json({ error: e.message })
+  }
+}
+
 
 async function getAccessToken() {
   const res = await fetch('https://oauth2.googleapis.com/token', {
