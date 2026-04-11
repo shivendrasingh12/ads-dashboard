@@ -4,6 +4,7 @@ import UACFunnelView from '../components/UACFunnelView'
 import Chatbot from '../components/Chatbot'
 import MOMView from '../components/MOMView'
 import BidTrackerView from '../components/BidTrackerView'
+import ChangeTrackerView from '../components/ChangeTrackerView'
 
 const addDays = (d, n) => { const x = new Date(d); x.setDate(x.getDate() + n); return x }
 const isoDate = d => d.toISOString().split('T')[0]
@@ -686,12 +687,13 @@ const NAV_ITEMS = [
   { id: 'analyser',  label: 'Ads Analyser',         icon: '📊', group: 'Views'    },
   { id: 'mom',        label: 'Minutes of Meeting',    icon: '📋', group: 'Views'    },
   { id: 'bidtracker', label: 'Bids \& Budgets',         icon: '💰', group: 'Views'    },
+  { id: 'changetracker', label: 'Change Tracker', icon: '🔄', group: 'Views' },
   { id: 'uac',       label: 'UAC — ROI Cities',     icon: '🚀', group: 'Funnels'  },
   { id: 'uact1',     label: 'UAC — Type 1',          icon: '🏙️', group: 'Funnels'  },
   { id: 'connect',   label: 'API Connections',       icon: '🔗', group: 'Setup'    },
 ]
 const VIEW_TITLES = {
-  mom: 'Minutes of Meeting', bidtracker: 'Bids \& Budgets Tracker', uac: 'UAC Funnel — ROI Cities', uact1: 'UAC Funnel — Type 1', connect: 'API Connections',
+  mom: 'Minutes of Meeting', bidtracker: 'Bids \& Budgets Tracker', changetracker: 'Change Tracker', uac: 'UAC Funnel — ROI Cities', uact1: 'UAC Funnel — Type 1', connect: 'API Connections',
 }
 
 export default function Dashboard() {
@@ -792,6 +794,7 @@ export default function Dashboard() {
             {view === 'analyser'    && <AnalyserView filters={filters} allCampaigns={allCampaigns} />}
             {view === 'mom' && <MOMView />}
             {view === 'bidtracker' && <BidTrackerView filters={filters} />}
+            {view === 'changetracker' && <ChangeTrackerView filters={filters} />}
             {view === 'uac'         && <UACFunnelView filters={filters} title="UAC — ROI Cities" />}
             {view === 'uact1'       && <UACFunnelView filters={filters} sheetId="1NVwo4EAhkhgBI_dJh7wDAs-GFn_DbOGWuzksEPmv9kY" title="UAC — Type 1" />}
             {view === 'connect'     && <ConnectView />}
