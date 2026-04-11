@@ -286,7 +286,7 @@ export default function BidTrackerView({ filters }) {
             </table>
           </div>
           <div style={{ padding: '7px 14px', borderTop: '0.5px solid var(--border)', fontSize: 10, color: 'var(--text3)' }}>
-            Google Ads · select campaigns to see bid & budget detail · 🔴 = >90% budget used · "changed" badge = setting modified this period · sort by any column
+            Google Ads · select campaigns to see bid &amp; budget detail · 🔴 = &gt;90% budget used · "changed" badge = setting modified this period · sort by any column
           </div>
         </div>
       )}
