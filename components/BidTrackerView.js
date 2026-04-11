@@ -34,6 +34,7 @@ function SpendChange({ val }) {
 
 function CampaignDetail({ camp }) {
   const [open, setOpen] = useState(false)
+  const gadsChangeHistoryUrl = `https://ads.google.com/aw/changehistory`
   return (
     <div style={{ borderTop: '0.5px solid var(--border)', background: 'var(--bg2)' }}>
       <div style={{ padding: '8px 16px', display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}
@@ -42,6 +43,11 @@ function CampaignDetail({ camp }) {
           {open ? '▾ Hide' : '▸ View'} bid & budget details
         </span>
         {camp.hasChanges && <span style={{ fontSize: 10, padding: '1px 6px', borderRadius: 99, background: 'var(--amber-bg)', color: 'var(--amber-text)', fontWeight: 500 }}>changes detected</span>}
+        <a href={gadsChangeHistoryUrl} target="_blank" rel="noreferrer"
+          onClick={e => e.stopPropagation()}
+          style={{ marginLeft: 'auto', fontSize: 11, padding: '3px 10px', borderRadius: 5, border: '1px solid var(--border)', background: 'var(--bg)', color: 'var(--blue-text)', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 4 }}>
+          View in Google Ads Change History ↗
+        </a>
       </div>
 
       {open && (
@@ -84,8 +90,8 @@ function CampaignDetail({ camp }) {
                     </div>
                   )
                 })}
-                <div style={{ fontSize: 10, color: 'var(--text3)', marginTop: 4, fontStyle: 'italic' }}>
-                  Note: Google Ads API does not expose the username who made changes for this account type.
+                <div style={{ fontSize: 11, color: 'var(--amber-text)', background: 'var(--amber-bg)', padding: '8px 10px', borderRadius: 6, marginTop: 4, lineHeight: 1.5 }}>
+                  ⚠ Google Ads API does not expose the username who made changes for MCC-managed accounts. To see who changed what and the exact old→new values, click <strong>"View in Google Ads Change History"</strong> above — it shows the full audit trail including user names.
                 </div>
               </div>
             ) : (
