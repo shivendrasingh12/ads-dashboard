@@ -2,9 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import Head from 'next/head'
 import UACFunnelView from '../components/UACFunnelView'
 import Chatbot from '../components/Chatbot'
-import MOMView from '../components/MOMView'
-
-import ChangeTrackerView from '../components/ChangeTrackerView'
+import SearchTermView from '../components/SearchTermView'
 
 const addDays = (d, n) => { const x = new Date(d); x.setDate(x.getDate() + n); return x }
 const isoDate = d => d.toISOString().split('T')[0]
@@ -685,14 +683,15 @@ function ConnectView() {
 const NAV_ITEMS = [
   { id: 'reminders', label: 'Schedule Reminders',  icon: '📅', group: 'Views'    },
   { id: 'analyser',  label: 'Ads Analyser',         icon: '📊', group: 'Views'    },
-  { id: 'mom',        label: 'Minutes of Meeting',    icon: '📋', group: 'Views'    },
-  { id: 'changetracker', label: 'Change Tracker', icon: '🔄', group: 'Views' },
+  { id: 'searchterms',label: 'Search Term Optimiser',icon: '🔍', group: 'Views'    },
   { id: 'uac',       label: 'UAC — ROI Cities',     icon: '🚀', group: 'Funnels'  },
   { id: 'uact1',     label: 'UAC — Type 1',          icon: '🏙️', group: 'Funnels'  },
   { id: 'connect',   label: 'API Connections',       icon: '🔗', group: 'Setup'    },
 ]
 const VIEW_TITLES = {
-  mom: 'Minutes of Meeting', bidtracker: 'Bids \& Budgets Tracker', changetracker: 'Change Tracker', uac: 'UAC Funnel — ROI Cities', uact1: 'UAC Funnel — Type 1', connect: 'API Connections',
+  reminders: 'Schedule Reminders', analyser: 'Ads Analyser',
+  searchterms: 'Search Term Optimiser',
+  uac: 'UAC Funnel — ROI Cities', uact1: 'UAC Funnel — Type 1', connect: 'API Connections',
 }
 
 export default function Dashboard() {
@@ -727,7 +726,7 @@ export default function Dashboard() {
             <div className="brand-mark">A</div>
             <div>
               <div className="brand-name">Ads Command</div>
-              <div className="brand-sub">Google + Meta Analytics</div>
+              <div className="brand-sub">Google + Meta</div>
             </div>
           </div>
 
@@ -791,9 +790,7 @@ export default function Dashboard() {
           <div className="page-content">
             {view === 'reminders'   && <RemindersView filters={filters} allCampaigns={allCampaigns} />}
             {view === 'analyser'    && <AnalyserView filters={filters} allCampaigns={allCampaigns} />}
-            {view === 'mom' && <MOMView />}
-            
-            {view === 'changetracker' && <ChangeTrackerView filters={filters} />}
+            {view === 'searchterms' && <SearchTermView filters={filters} />}
             {view === 'uac'         && <UACFunnelView filters={filters} title="UAC — ROI Cities" />}
             {view === 'uact1'       && <UACFunnelView filters={filters} sheetId="1NVwo4EAhkhgBI_dJh7wDAs-GFn_DbOGWuzksEPmv9kY" title="UAC — Type 1" />}
             {view === 'connect'     && <ConnectView />}
