@@ -160,7 +160,7 @@ export default async function handler(req, res) {
         )
         ${campWhere}
       ORDER BY change_event.change_date_time DESC
-      LIMIT 5000
+      LIMIT 500
     `)
 
     const changes = []
