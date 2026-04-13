@@ -58,8 +58,8 @@ function MeetingCard({ meeting, onUpdate, onDelete }) {
     setEditing(false)
   }
 
-  const doneCount = meeting.actionItems.filter(a => a.status === 'Done').length
-  const blockedCount = meeting.actionItems.filter(a => a.status === 'Blocked').length
+  const doneCount = ((Array.isArray(meeting.actionItems)?meeting.actionItems:[])).filter(a => a.status === 'Done').length
+  const blockedCount = ((Array.isArray(meeting.actionItems)?meeting.actionItems:[])).filter(a => a.status === 'Blocked').length
 
   return (
     <div style={{ background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 12, overflow: 'hidden', marginBottom: 10, boxShadow: 'var(--shadow)' }}>
@@ -80,10 +80,10 @@ function MeetingCard({ meeting, onUpdate, onDelete }) {
         </div>
         <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
           {blockedCount > 0 && <span style={{ fontSize: 11, padding: '2px 8px', borderRadius: 99, background: 'var(--red-bg)', color: 'var(--red-text)', fontWeight: 500 }}>⚠ {blockedCount} blocked</span>}
-          <span style={{ fontSize: 11, color: 'var(--text3)' }}>{doneCount}/{meeting.actionItems.length} done</span>
+          <span style={{ fontSize: 11, color: 'var(--text3)' }}>{doneCount}/{ai.length} done</span>
           {/* Progress bar */}
           <div style={{ width: 60, height: 4, background: 'var(--bg3)', borderRadius: 99, overflow: 'hidden' }}>
-            <div style={{ width: (doneCount / Math.max(meeting.actionItems.length, 1) * 100) + '%', height: '100%', background: 'var(--green)', borderRadius: 99 }} />
+            <div style={{ width: (doneCount / Math.max(ai.length, 1) * 100) + '%', height: '100%', background: 'var(--green)', borderRadius: 99 }} />
           </div>
           <span style={{ fontSize: 12, color: 'var(--text3)', transition: 'transform .15s', display: 'inline-block', transform: expanded ? 'rotate(180deg)' : 'none' }}>▾</span>
         </div>
@@ -108,7 +108,7 @@ function MeetingCard({ meeting, onUpdate, onDelete }) {
                 </tr>
               </thead>
               <tbody>
-                {meeting.actionItems.map((a, i) => (
+                {ai.map((a, i) => (
                   <tr key={i} style={{ borderBottom: '0.5px solid var(--border)', background: a.status === 'Blocked' ? 'rgba(220,38,38,0.03)' : a.status === 'Done' ? 'rgba(22,163,74,0.03)' : 'transparent' }}>
                     <td style={{ padding: '8px 10px', color: 'var(--text3)', fontSize: 11 }}>{i + 1}</td>
                     <td style={{ padding: '8px 10px', fontWeight: 500, textDecoration: a.status === 'Done' ? 'line-through' : 'none', color: a.status === 'Done' ? 'var(--text3)' : 'var(--text)' }}>{a.item}</td>
@@ -223,8 +223,8 @@ export default function MOMView() {
     setForm(f => ({ ...f, actionItems: [...f.actionItems, { item: '', owner: '', dependency: '', status: 'Pending', link: '' }] }))
   }
 
-  const pending = meetings.reduce((s, m) => s + m.actionItems.filter(a => a.status === 'Pending' || a.status === 'In Progress').length, 0)
-  const blocked = meetings.reduce((s, m) => s + m.actionItems.filter(a => a.status === 'Blocked').length, 0)
+  const pending = meetings.reduce((s, m) => s + ((Array.isArray(m.actionItems)?m.actionItems:[])).filter(a => a.status === 'Pending' || a.status === 'In Progress').length, 0)
+  const blocked = meetings.reduce((s, m) => s + ((Array.isArray(m.actionItems)?m.actionItems:[])).filter(a => a.status === 'Blocked').length, 0)
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>

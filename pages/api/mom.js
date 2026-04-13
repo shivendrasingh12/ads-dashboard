@@ -1,8 +1,11 @@
 /**
  * Minutes of Meeting API — Google Sheets backed
- * GET    /api/mom          → { meetings: [...] }
- * POST   /api/mom          → create/update meeting
- * DELETE /api/mom?id=xxx   → delete meeting
+ * GET    /api/mom?search=xxx  → { meetings: [...] }
+ * POST   /api/mom             → create meeting
+ * PUT    /api/mom             → update meeting
+ * DELETE /api/mom?id=xxx      → delete meeting
+ *
+ * Sheet columns: id | date | title | attendees | notes | actionItems (JSON) | createdAt
  */
 
 const SHEET_ID = process.env.APP_DATA_SHEET_ID
@@ -26,7 +29,7 @@ async function getAccessToken() {
 
 async function getRows(token) {
   const res = await fetch(
-    `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${TAB}!A:H`,
+    `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${TAB}!A:G`,
     { headers: { 'Authorization': `Bearer ${token}` } }
   )
   const d = await res.json()
@@ -43,7 +46,7 @@ async function getRows(token) {
 
 async function appendRow(token, values) {
   await fetch(
-    `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${TAB}!A:H:append?valueInputOption=RAW&insertDataOption=INSERT_ROWS`,
+    `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${TAB}!A:G:append?valueInputOption=RAW&insertDataOption=INSERT_ROWS`,
     {
       method: 'POST',
       headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
@@ -54,7 +57,7 @@ async function appendRow(token, values) {
 
 async function updateRow(token, rowIndex, values) {
   await fetch(
-    `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${TAB}!A${rowIndex}:H${rowIndex}?valueInputOption=RAW`,
+    `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${TAB}!A${rowIndex}:G${rowIndex}?valueInputOption=RAW`,
     {
       method: 'PUT',
       headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
@@ -63,15 +66,18 @@ async function updateRow(token, rowIndex, values) {
   )
 }
 
-async function deleteRow(token, rowIndex) {
+async function getSheetGid(token) {
   const meta = await fetch(
     `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}?fields=sheets.properties`,
     { headers: { 'Authorization': `Bearer ${token}` } }
   )
   const metaD = await meta.json()
   const sheet = (metaD.sheets || []).find(s => s.properties.title === TAB)
-  const sheetId = sheet?.properties?.sheetId || 0
+  return sheet?.properties?.sheetId || 0
+}
 
+async function deleteRow(token, rowIndex) {
+  const sheetId = await getSheetGid(token)
   await fetch(
     `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}:batchUpdate`,
     {
@@ -88,41 +94,67 @@ async function deleteRow(token, rowIndex) {
   )
 }
 
+function rowToMeeting(r) {
+  let actionItems = []
+  try { actionItems = JSON.parse(r.actionItems || '[]') } catch { actionItems = [] }
+  return {
+    id: r.id,
+    date: r.date,
+    title: r.title,
+    attendees: r.attendees,
+    notes: r.notes,
+    actionItems,
+    createdAt: r.createdAt,
+  }
+}
+
+function meetingToRow(m, createdAt) {
+  return [
+    m.id || '',
+    m.date || '',
+    m.title || '',
+    m.attendees || '',
+    m.notes || '',
+    JSON.stringify(m.actionItems || []),
+    createdAt || new Date().toISOString(),
+  ]
+}
+
 export default async function handler(req, res) {
   try {
     const token = await getAccessToken()
 
     if (req.method === 'GET') {
       const rows = await getRows(token)
-      const meetings = rows.map(r => ({
-        id: r.id,
-        date: r.date,
-        title: r.title,
-        attendees: r.attendees,
-        notes: r.notes,
-        actionItems: r.actionItems,
-        createdAt: r.createdAt,
-      }))
+      let meetings = rows.map(rowToMeeting)
+      const { search } = req.query
+      if (search) {
+        const s = search.toLowerCase()
+        meetings = meetings.filter(m =>
+          [m.title, m.attendees, m.notes, ...(m.actionItems || []).map(a => a.item + ' ' + a.owner)]
+            .some(v => (v || '').toLowerCase().includes(s))
+        )
+      }
+      // Sort newest first
+      meetings.sort((a, b) => (b.date || '').localeCompare(a.date || ''))
       return res.status(200).json({ meetings })
     }
 
     if (req.method === 'POST') {
-      const { id, date, title, attendees, notes, actionItems } = req.body
+      const id = Date.now().toString(36) + Math.random().toString(36).slice(2, 6)
+      const meeting = { ...req.body, id }
+      await appendRow(token, meetingToRow(meeting))
+      return res.status(200).json({ ok: true, id })
+    }
 
-      // If id provided, update existing row
-      if (id) {
-        const rows = await getRows(token)
-        const row = rows.find(r => r.id === id)
-        if (row) {
-          await updateRow(token, row._rowIndex, [id, date || '', title || '', attendees || '', notes || '', actionItems || '', row.createdAt || new Date().toISOString()])
-          return res.status(200).json({ ok: true, id })
-        }
-      }
-
-      // Create new
-      const newId = Date.now().toString(36) + Math.random().toString(36).slice(2, 6)
-      await appendRow(token, [newId, date || '', title || '', attendees || '', notes || '', actionItems || '', new Date().toISOString()])
-      return res.status(200).json({ ok: true, id: newId })
+    if (req.method === 'PUT') {
+      const { id } = req.body
+      if (!id) return res.status(400).json({ error: 'id required' })
+      const rows = await getRows(token)
+      const row = rows.find(r => r.id === id)
+      if (!row) return res.status(404).json({ error: 'not found' })
+      await updateRow(token, row._rowIndex, meetingToRow(req.body, row.createdAt))
+      return res.status(200).json({ ok: true })
     }
 
     if (req.method === 'DELETE') {
