@@ -715,7 +715,7 @@ export default function Dashboard() {
   return (
     <>
       <Head>
-        <title>Ads Command — {VIEW_TITLES[view]}</title>
+        <title>Aristok*Porter Dashboard — {VIEW_TITLES[view]}</title>
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
       </Head>
@@ -724,10 +724,10 @@ export default function Dashboard() {
         {/* Sidebar */}
         <aside className="sidebar">
           <div className="sidebar-brand">
-            <div className="brand-mark">A</div>
+            <img src="/aristok-logo.png" alt="Aristok" style={{width:36,height:36,borderRadius:8,objectFit:"contain"}} />
             <div>
-              <div className="brand-name">Ads Command</div>
-              <div className="brand-sub">Google + Meta Analytics</div>
+              <div className="brand-name">Aristok*Porter Dashboard</div>
+              <div className="brand-sub">Google + Meta Ads Manager</div>
             </div>
           </div>
 
