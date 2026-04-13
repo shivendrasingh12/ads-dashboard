@@ -9,6 +9,8 @@ const STATUS_STYLE = {
   'Cancelled':   { bg: '#F8FAFC', color: '#94A3B8', dot: '#CBD5E1' },
 }
 
+function safe(items) { return Array.isArray(items) ? items : [] }
+
 function StatusPill({ status }) {
   const s = STATUS_STYLE[status] || STATUS_STYLE['Pending']
   return (
@@ -51,15 +53,16 @@ const emptyForm = () => ({
 function MeetingCard({ meeting, onUpdate, onDelete }) {
   const [expanded, setExpanded] = useState(false)
   const [editing, setEditing] = useState(false)
-  const [form, setForm] = useState(meeting)
+  const [form, setForm] = useState({ ...meeting, actionItems: safe(meeting.actionItems) })
 
   function handleSave() {
     onUpdate(form)
     setEditing(false)
   }
 
-  const doneCount = ((Array.isArray(meeting.actionItems)?meeting.actionItems:[])).filter(a => a.status === 'Done').length
-  const blockedCount = ((Array.isArray(meeting.actionItems)?meeting.actionItems:[])).filter(a => a.status === 'Blocked').length
+  const ai = safe(meeting.actionItems)
+  const doneCount = ai.filter(a => a.status === 'Done').length
+  const blockedCount = ai.filter(a => a.status === 'Blocked').length
 
   return (
     <div style={{ background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 12, overflow: 'hidden', marginBottom: 10, boxShadow: 'var(--shadow)' }}>
@@ -81,7 +84,6 @@ function MeetingCard({ meeting, onUpdate, onDelete }) {
         <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
           {blockedCount > 0 && <span style={{ fontSize: 11, padding: '2px 8px', borderRadius: 99, background: 'var(--red-bg)', color: 'var(--red-text)', fontWeight: 500 }}>⚠ {blockedCount} blocked</span>}
           <span style={{ fontSize: 11, color: 'var(--text3)' }}>{doneCount}/{ai.length} done</span>
-          {/* Progress bar */}
           <div style={{ width: 60, height: 4, background: 'var(--bg3)', borderRadius: 99, overflow: 'hidden' }}>
             <div style={{ width: (doneCount / Math.max(ai.length, 1) * 100) + '%', height: '100%', background: 'var(--green)', borderRadius: 99 }} />
           </div>
@@ -97,7 +99,6 @@ function MeetingCard({ meeting, onUpdate, onDelete }) {
               {meeting.notes}
             </div>
           )}
-          {/* Action items table */}
           <div style={{ overflowX: 'auto' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
               <thead>
@@ -154,21 +155,21 @@ function MeetingCard({ meeting, onUpdate, onDelete }) {
           <div style={{ marginBottom: 10 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
               <label style={{ fontSize: 11, color: 'var(--text3)', fontWeight: 500 }}>Action items</label>
-              <button onClick={() => setForm(f => ({ ...f, actionItems: [...f.actionItems, { item: '', owner: '', dependency: '', status: 'Pending', link: '' }] }))}
+              <button onClick={() => setForm(f => ({ ...f, actionItems: [...safe(f.actionItems), { item: '', owner: '', dependency: '', status: 'Pending', link: '' }] }))}
                 className="btn-ghost btn-sm">+ Add row</button>
             </div>
             <div style={{ fontSize: 10, color: 'var(--text3)', display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr 1.5fr auto', gap: 6, marginBottom: 4, padding: '0 2px' }}>
               <span>Action item</span><span>Owner</span><span>Dependency</span><span>Status</span><span>Link</span><span></span>
             </div>
-            {form.actionItems.map((a, i) => (
+            {safe(form.actionItems).map((a, i) => (
               <ActionRow key={i} item={a} index={i}
-                onChange={(idx, field, val) => setForm(f => ({ ...f, actionItems: f.actionItems.map((x, j) => j === idx ? { ...x, [field]: val } : x) }))}
-                onDelete={idx => setForm(f => ({ ...f, actionItems: f.actionItems.filter((_, j) => j !== idx) }))} />
+                onChange={(idx, field, val) => setForm(f => ({ ...f, actionItems: safe(f.actionItems).map((x, j) => j === idx ? { ...x, [field]: val } : x) }))}
+                onDelete={idx => setForm(f => ({ ...f, actionItems: safe(f.actionItems).filter((_, j) => j !== idx) }))} />
             ))}
           </div>
           <div style={{ display: 'flex', gap: 8 }}>
             <button onClick={handleSave} className="btn-primary">Save changes</button>
-            <button onClick={() => { setForm(meeting); setEditing(false) }} className="btn-ghost">Cancel</button>
+            <button onClick={() => { setForm({ ...meeting, actionItems: safe(meeting.actionItems) }); setEditing(false) }} className="btn-ghost">Cancel</button>
           </div>
         </div>
       )}
@@ -214,21 +215,20 @@ export default function MOMView() {
   }
 
   function updateActionItem(idx, field, val) {
-    setForm(f => ({ ...f, actionItems: f.actionItems.map((x, j) => j === idx ? { ...x, [field]: val } : x) }))
+    setForm(f => ({ ...f, actionItems: safe(f.actionItems).map((x, j) => j === idx ? { ...x, [field]: val } : x) }))
   }
   function deleteActionItem(idx) {
-    setForm(f => ({ ...f, actionItems: f.actionItems.filter((_, j) => j !== idx) }))
+    setForm(f => ({ ...f, actionItems: safe(f.actionItems).filter((_, j) => j !== idx) }))
   }
   function addActionItem() {
-    setForm(f => ({ ...f, actionItems: [...f.actionItems, { item: '', owner: '', dependency: '', status: 'Pending', link: '' }] }))
+    setForm(f => ({ ...f, actionItems: [...safe(f.actionItems), { item: '', owner: '', dependency: '', status: 'Pending', link: '' }] }))
   }
 
-  const pending = meetings.reduce((s, m) => s + ((Array.isArray(m.actionItems)?m.actionItems:[])).filter(a => a.status === 'Pending' || a.status === 'In Progress').length, 0)
-  const blocked = meetings.reduce((s, m) => s + ((Array.isArray(m.actionItems)?m.actionItems:[])).filter(a => a.status === 'Blocked').length, 0)
+  const pending = meetings.reduce((s, m) => s + safe(m.actionItems).filter(a => a.status === 'Pending' || a.status === 'In Progress').length, 0)
+  const blocked = meetings.reduce((s, m) => s + safe(m.actionItems).filter(a => a.status === 'Blocked').length, 0)
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-      {/* Summary + controls */}
       <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
         <div style={{ display: 'flex', gap: 8, flex: 1 }}>
           {[
@@ -249,7 +249,6 @@ export default function MOMView() {
         </button>
       </div>
 
-      {/* New meeting form */}
       {showForm && (
         <div style={{ background: 'var(--bg)', border: '1px solid var(--accent)', borderRadius: 12, padding: '16px', boxShadow: 'var(--shadow-md)' }}>
           <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 14, color: 'var(--text)' }}>New meeting record</div>
@@ -279,7 +278,7 @@ export default function MOMView() {
             <div style={{ fontSize: 10, color: 'var(--text3)', display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr 1.5fr auto', gap: 6, marginBottom: 4, padding: '0 2px' }}>
               <span>Action item</span><span>Owner</span><span>Dependency</span><span>Status</span><span>Sheet / data link</span><span></span>
             </div>
-            {form.actionItems.map((a, i) => (
+            {safe(form.actionItems).map((a, i) => (
               <ActionRow key={i} item={a} index={i} onChange={updateActionItem} onDelete={deleteActionItem} />
             ))}
           </div>
@@ -289,7 +288,6 @@ export default function MOMView() {
         </div>
       )}
 
-      {/* Meetings list */}
       {loading && <div style={{ textAlign: 'center', padding: 32, color: 'var(--text3)' }}>Loading...</div>}
       {!loading && meetings.length === 0 && (
         <div style={{ textAlign: 'center', padding: '48px 20px', border: '1.5px dashed var(--border2)', borderRadius: 12, color: 'var(--text3)' }}>
