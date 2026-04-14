@@ -3,6 +3,7 @@ import Head from 'next/head'
 import UACFunnelView from '../components/UACFunnelView'
 import Chatbot from '../components/Chatbot'
 import MOMView from '../components/MOMView'
+import MetaFunnelView from '../components/MetaFunnelView'
 
 import ChangeTrackerView from '../components/ChangeTrackerView'
 
@@ -689,10 +690,12 @@ const NAV_ITEMS = [
   { id: 'changetracker', label: 'Change Tracker', icon: '🔄', group: 'Views' },
   { id: 'uac',       label: 'UAC — ROI Cities',     icon: '🚀', group: 'Funnels'  },
   { id: 'uact1',     label: 'UAC — Type 1',          icon: '🏙️', group: 'Funnels'  },
+  { id: 'metaroi',  label: 'Meta — ROI Cities',     icon: '📱', group: 'Funnels'  },
+  { id: 'metat1',   label: 'Meta — Type 1',          icon: '📱', group: 'Funnels'  },
   { id: 'connect',   label: 'API Connections',       icon: '🔗', group: 'Setup'    },
 ]
 const VIEW_TITLES = {
-  mom: 'Minutes of Meeting', bidtracker: 'Bids \& Budgets Tracker', changetracker: 'Change Tracker', uac: 'UAC Funnel — ROI Cities', uact1: 'UAC Funnel — Type 1', connect: 'API Connections',
+  mom: 'Minutes of Meeting', changetracker: 'Change Tracker', uac: 'UAC Funnel — ROI Cities', uact1: 'UAC Funnel — Type 1', metaroi: 'Meta Funnel — ROI Cities', metat1: 'Meta Funnel — Type 1', connect: 'API Connections',
 }
 
 export default function Dashboard() {
@@ -796,6 +799,8 @@ export default function Dashboard() {
             {view === 'changetracker' && <ChangeTrackerView filters={filters} />}
             {view === 'uac'         && <UACFunnelView filters={filters} title="UAC — ROI Cities" />}
             {view === 'uact1'       && <UACFunnelView filters={filters} sheetId="1NVwo4EAhkhgBI_dJh7wDAs-GFn_DbOGWuzksEPmv9kY" title="UAC — Type 1" />}
+            {view === 'metaroi'     && <MetaFunnelView filters={filters} title="Meta — ROI Cities" />}
+            {view === 'metat1'      && <MetaFunnelView filters={filters} sheetId="1NVwo4EAhkhgBI_dJh7wDAs-GFn_DbOGWuzksEPmv9kY" title="Meta — Type 1" />}
             {view === 'connect'     && <ConnectView />}
           </div>
           <Chatbot filters={filters} />
