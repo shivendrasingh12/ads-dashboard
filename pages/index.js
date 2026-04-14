@@ -6,6 +6,7 @@ import MOMView from '../components/MOMView'
 import MetaFunnelView from '../components/MetaFunnelView'
 
 import ChangeTrackerView from '../components/ChangeTrackerView'
+import SheetsRepoView from '../components/SheetsRepoView'
 
 const addDays = (d, n) => { const x = new Date(d); x.setDate(x.getDate() + n); return x }
 const isoDate = d => d.toISOString().split('T')[0]
@@ -688,14 +689,15 @@ const NAV_ITEMS = [
   { id: 'analyser',  label: 'Ads Analyser',         icon: '📊', group: 'Views'    },
   { id: 'mom',        label: 'Minutes of Meeting',    icon: '📋', group: 'Views'    },
   { id: 'changetracker', label: 'Change Tracker', icon: '🔄', group: 'Views' },
+  { id: 'sheetsrepo', label: 'Sheets Repository', icon: '📂', group: 'Views' },
   { id: 'uac',       label: 'UAC — ROI Cities',     icon: '🚀', group: 'Funnels'  },
   { id: 'uact1',     label: 'UAC — Type 1',          icon: '🏙️', group: 'Funnels'  },
-  { id: 'metaroi',  label: 'Meta — ROI Cities',     icon: '📱', group: 'Funnels'  },
-  { id: 'metat1',   label: 'Meta — Type 1',          icon: '📱', group: 'Funnels'  },
+  { id: 'metaroi',   label: 'Meta — ROI Cities',    icon: '📱', group: 'Funnels'  },
+  { id: 'metat1',    label: 'Meta — Type 1',         icon: '📱', group: 'Funnels'  },
   { id: 'connect',   label: 'API Connections',       icon: '🔗', group: 'Setup'    },
 ]
 const VIEW_TITLES = {
-  mom: 'Minutes of Meeting', changetracker: 'Change Tracker', uac: 'UAC Funnel — ROI Cities', uact1: 'UAC Funnel — Type 1', metaroi: 'Meta Funnel — ROI Cities', metat1: 'Meta Funnel — Type 1', connect: 'API Connections',
+  mom: 'Minutes of Meeting', changetracker: 'Change Tracker', sheetsrepo: 'Sheets Repository', uac: 'UAC Funnel — ROI Cities', uact1: 'UAC Funnel — Type 1', metaroi: 'Meta Funnel — ROI Cities', metat1: 'Meta Funnel — Type 1', connect: 'API Connections',
 }
 
 export default function Dashboard() {
@@ -801,6 +803,7 @@ export default function Dashboard() {
             {view === 'uact1'       && <UACFunnelView filters={filters} sheetId="1NVwo4EAhkhgBI_dJh7wDAs-GFn_DbOGWuzksEPmv9kY" title="UAC — Type 1" />}
             {view === 'metaroi'     && <MetaFunnelView filters={filters} title="Meta — ROI Cities" />}
             {view === 'metat1'      && <MetaFunnelView filters={filters} sheetId="1NVwo4EAhkhgBI_dJh7wDAs-GFn_DbOGWuzksEPmv9kY" title="Meta — Type 1" />}
+            {view === 'sheetsrepo'  && <SheetsRepoView />}
             {view === 'connect'     && <ConnectView />}
           </div>
           <Chatbot filters={filters} />
