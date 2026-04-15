@@ -784,12 +784,6 @@ export default function Dashboard() {
                 <input className="filter-date" type="date" value={filters.dateTo}
                   onChange={e => setFilters(f => ({ ...f, dateTo: e.target.value }))} />
               </div>
-              <select className="filter-select" value={filters.platform}
-                onChange={e => setFilters(f => ({ ...f, platform: e.target.value }))}>
-                <option value="all">All platforms</option>
-                <option value="google">Google</option>
-                <option value="meta">Meta</option>
-              </select>
             </div>
           </header>
 
