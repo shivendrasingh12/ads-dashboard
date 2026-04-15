@@ -7,6 +7,7 @@ import MetaFunnelView from '../components/MetaFunnelView'
 
 import ChangeTrackerView from '../components/ChangeTrackerView'
 import SheetsRepoView from '../components/SheetsRepoView'
+import AssetAnalyzerView from '../components/AssetAnalyzerView'
 
 const addDays = (d, n) => { const x = new Date(d); x.setDate(x.getDate() + n); return x }
 const isoDate = d => d.toISOString().split('T')[0]
@@ -686,7 +687,7 @@ function ConnectView() {
 /* ── MAIN DASHBOARD ── */
 const NAV_ITEMS = [
   { id: 'reminders', label: 'Schedule Reminders',  icon: '📅', group: 'Views'    },
-  { id: 'analyser',  label: 'Ads Analyser',         icon: '📊', group: 'Views'    },
+  { id: 'assetanalyzer', label: 'Asset Analyzer',      icon: '🎨', group: 'Views'    },
   { id: 'mom',        label: 'Minutes of Meeting',    icon: '📋', group: 'Views'    },
   { id: 'changetracker', label: 'Change Tracker', icon: '🔄', group: 'Views' },
   { id: 'sheetsrepo', label: 'Sheets Repository', icon: '📂', group: 'Views' },
@@ -697,7 +698,7 @@ const NAV_ITEMS = [
   { id: 'connect',   label: 'API Connections',       icon: '🔗', group: 'Setup'    },
 ]
 const VIEW_TITLES = {
-  mom: 'Minutes of Meeting', changetracker: 'Change Tracker', sheetsrepo: 'Sheets Repository', uac: 'UAC Funnel — ROI Cities', uact1: 'UAC Funnel — Type 1', metaroi: 'Meta Funnel — ROI Cities', metat1: 'Meta Funnel — Type 1', connect: 'API Connections',
+  mom: 'Minutes of Meeting', changetracker: 'Change Tracker', sheetsrepo: 'Sheets Repository', assetanalyzer: 'Ad Asset Performance Analyzer', uac: 'UAC Funnel — ROI Cities', uact1: 'UAC Funnel — Type 1', metaroi: 'Meta Funnel — ROI Cities', metat1: 'Meta Funnel — Type 1', connect: 'API Connections',
 }
 
 export default function Dashboard() {
@@ -795,7 +796,7 @@ export default function Dashboard() {
           {/* Page content */}
           <div className="page-content">
             {view === 'reminders'   && <RemindersView filters={filters} allCampaigns={allCampaigns} />}
-            {view === 'analyser'    && <AnalyserView filters={filters} allCampaigns={allCampaigns} />}
+            {view === 'assetanalyzer' && <AssetAnalyzerView />}
             {view === 'mom' && <MOMView />}
             
             {view === 'changetracker' && <ChangeTrackerView filters={filters} />}
