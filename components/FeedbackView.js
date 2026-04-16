@@ -61,7 +61,7 @@ export default function FeedbackView() {
           {/* Name */}
           <div>
             <label style={{ fontSize: 11, color: 'var(--text3)', fontWeight: 500, display: 'block', marginBottom: 4 }}>Your Name (optional)</label>
-            <input style={si} placeholder="e.g. Yogesh" value={name} onChange={e => setName(e.target.value)} />
+            <input style={si} placeholder="Your name" value={name} onChange={e => setName(e.target.value)} />
           </div>
 
           {/* Section selector */}
