@@ -8,6 +8,7 @@ import MetaFunnelView from '../components/MetaFunnelView'
 import ChangeTrackerView from '../components/ChangeTrackerView'
 import SheetsRepoView from '../components/SheetsRepoView'
 import AssetAnalyzerView from '../components/AssetAnalyzerView'
+import FeedbackView from '../components/FeedbackView'
 
 const addDays = (d, n) => { const x = new Date(d); x.setDate(x.getDate() + n); return x }
 const isoDate = d => d.toISOString().split('T')[0]
@@ -695,10 +696,11 @@ const NAV_ITEMS = [
   { id: 'uact1',     label: 'UAC — Type 1',          icon: '🏙️', group: 'Funnels'  },
   { id: 'metaroi',   label: 'Meta — ROI Cities',    icon: '📱', group: 'Funnels'  },
   { id: 'metat1',    label: 'Meta — Type 1',         icon: '📱', group: 'Funnels'  },
+  { id: 'feedback',  label: 'Feedback',              icon: '💬', group: 'Setup'    },
   { id: 'connect',   label: 'API Connections',       icon: '🔗', group: 'Setup'    },
 ]
 const VIEW_TITLES = {
-  mom: 'Minutes of Meeting', changetracker: 'Change Tracker', sheetsrepo: 'Sheets Repository', assetanalyzer: 'Ad Asset Performance Analyzer', uac: 'UAC Funnel — ROI Cities', uact1: 'UAC Funnel — Type 1', metaroi: 'Meta Funnel — ROI Cities', metat1: 'Meta Funnel — Type 1', connect: 'API Connections',
+  mom: 'Minutes of Meeting', changetracker: 'Change Tracker', sheetsrepo: 'Sheets Repository', assetanalyzer: 'Ad Asset Performance Analyzer', uac: 'UAC Funnel — ROI Cities', uact1: 'UAC Funnel — Type 1', metaroi: 'Meta Funnel — ROI Cities', metat1: 'Meta Funnel — Type 1', feedback: 'Submit Feedback', connect: 'API Connections',
 }
 
 export default function Dashboard() {
@@ -799,6 +801,7 @@ export default function Dashboard() {
             {view === 'metaroi'     && <MetaFunnelView filters={filters} title="Meta — ROI Cities" />}
             {view === 'metat1'      && <MetaFunnelView filters={filters} sheetId="1NVwo4EAhkhgBI_dJh7wDAs-GFn_DbOGWuzksEPmv9kY" title="Meta — Type 1" />}
             {view === 'sheetsrepo'  && <SheetsRepoView />}
+            {view === 'feedback'    && <FeedbackView />}
             {view === 'connect'     && <ConnectView />}
           </div>
           <Chatbot filters={filters} />
