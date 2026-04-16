@@ -1,10 +1,5 @@
 /**
  * Minutes of Meeting API — Google Sheets backed
- * GET    /api/mom?search=xxx  → { meetings: [...] }
- * POST   /api/mom             → create meeting
- * PUT    /api/mom             → update meeting
- * DELETE /api/mom?id=xxx      → delete meeting
- *
  * Sheet columns: id | date | title | attendees | notes | actionItems (JSON) | createdAt | category
  */
 
@@ -173,3 +168,4 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: e.message })
   }
 }
+// force rebuild
